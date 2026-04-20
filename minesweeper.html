@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>지뢰찾기</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #1a1a2e;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+      color: #eee;
+    }
+
+    #top-bar {
+      width: 100%;
+      max-width: 720px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    #back-btn {
+      background: none;
+      border: 1px solid #4a4a8a;
+      color: #aac;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+    }
+    #back-btn:hover { background: #16213e; }
+    #top-bar h1 { font-size: 20px; color: #c0c0ff; letter-spacing: 2px; }
+
+    /* Difficulty selector */
+    #diff-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .diff-btn {
+      padding: 6px 18px;
+      background: #16213e;
+      border: 1px solid #4a4a8a;
+      border-radius: 6px;
+      color: #aac;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      transition: background 0.15s;
+    }
+    .diff-btn:hover { background: #1e2a5a; }
+    .diff-btn.active { background: #2e2e7a; border-color: #8080cc; color: #e0e0ff; }
+
+    /* Game panel */
+    #game-panel {
+      background: #16213e;
+      border: 1px solid #4a4a8a;
+      border-radius: 10px;
+      padding: 16px;
+      max-width: 720px;
+      width: 100%;
+    }
+
+    /* Header: flag count | reset | timer */
+    #game-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0d0d1a;
+      border: 1px solid #2a2a5a;
+      border-radius: 6px;
+      padding: 8px 16px;
+      margin-bottom: 12px;
+    }
+    .counter {
+      font-size: 28px;
+      font-weight: bold;
+      color: #e05050;
+      letter-spacing: 2px;
+      min-width: 60px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+    #timer-display { color: #50c050; text-align: right; }
+    #reset-btn {
+      font-size: 26px;
+      background: #2a2a5a;
+      border: 2px solid #4a4a8a;
+      border-radius: 8px;
+      width: 44px; height: 44px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+      line-height: 1;
+    }
+    #reset-btn:hover { background: #3a3a7a; }
+
+    /* Board */
+    #board-wrap { overflow-x: auto; }
+    #board {
+      display: inline-grid;
+      gap: 2px;
+      background: #0d0d1a;
+      padding: 6px;
+      border-radius: 6px;
+      border: 1px solid #2a2a5a;
+    }
+    .cell {
+      width: var(--cell); height: var(--cell);
+      background: #2a2a5a;
+      border: 1px solid #4a4a8a;
+      border-radius: 3px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: calc(var(--cell) * 0.48);
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.08s;
+    }
+    .cell:hover:not(.revealed):not(.flagged) { background: #3a3a7a; }
+    .cell.revealed {
+      background: #0d1a2a;
+      border-color: #1a2a3a;
+      cursor: default;
+    }
+    .cell.flagged { background: #2a2a5a; }
+    .cell.mine-hit { background: #6a1a1a !important; }
+    .cell.wrong { background: #5a1a1a !important; }
+    .cell[data-n="1"] { color: #4fc3f7; }
+    .cell[data-n="2"] { color: #81c784; }
+    .cell[data-n="3"] { color: #e57373; }
+    .cell[data-n="4"] { color: #7986cb; }
+    .cell[data-n="5"] { color: #ff7043; }
+    .cell[data-n="6"] { color: #26c6da; }
+    .cell[data-n="7"] { color: #ce93d8; }
+    .cell[data-n="8"] { color: #bdbdbd; }
+
+    /* Mobile flag toggle */
+    #flag-toggle {
+      display: none;
+      margin-top: 12px;
+      width: 100%;
+      padding: 10px;
+      background: #16213e;
+      border: 1px solid #4a4a8a;
+      border-radius: 8px;
+      color: #aac;
+      font-size: 14px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    #flag-toggle.on { background: #2a1a5a; border-color: #8060cc; color: #e0c0ff; }
+
+    /* Best time info */
+    #best-bar {
+      margin-top: 12px;
+      font-size: 12px;
+      color: #446;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+    #best-bar span { color: #6a6aaa; }
+
+    /* Result overlay */
+    #result {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 12px;
+    }
+    #result.hidden { display: none; }
+    #result h2 { font-size: 36px; color: #e0e0ff; }
+    #result p { color: #aaa; font-size: 15px; }
+    #result button {
+      padding: 12px 32px;
+      background: #4a4a8a; color: #fff;
+      border: none; border-radius: 6px;
+      cursor: pointer; font-size: 16px; font-family: inherit;
+    }
+    #result button:hover { background: #6a6aaa; }
+
+    @media (max-width: 480px) {
+      #flag-toggle { display: block; }
+      .diff-btn { padding: 6px 12px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="result" class="hidden">
+  <h2 id="result-title"></h2>
+  <p id="result-msg"></p>
+  <button id="result-btn">다시 시작</button>
+</div>
+
+<div id="top-bar">
+  <button id="back-btn">← 허브</button>
+  <h1>지뢰찾기</h1>
+  <div style="width:72px"></div>
+</div>
+
+<div id="diff-bar">
+  <button class="diff-btn active" data-diff="easy">초급</button>
+  <button class="diff-btn" data-diff="medium">중급</button>
+  <button class="diff-btn" data-diff="hard">고급</button>
+</div>
+
+<div id="game-panel">
+  <div id="game-header">
+    <div class="counter" id="flag-count">010</div>
+    <button id="reset-btn">🙂</button>
+    <div class="counter" id="timer-display">000</div>
+  </div>
+  <div id="board-wrap">
+    <div id="board"></div>
+  </div>
+  <button id="flag-toggle">🚩 깃발 모드 OFF</button>
+  <div id="best-bar">최고 기록: <span id="best-time">-</span></div>
+</div>
+
+<script>
+const DIFF = {
+  easy:   { rows: 9,  cols: 9,  mines: 10,  cell: 40 },
+  medium: { rows: 16, cols: 16, mines: 40,  cell: 32 },
+  hard:   { rows: 16, cols: 30, mines: 99,  cell: 28 },
+};
+const NUM_EMOJI = ['', '1','2','3','4','5','6','7','8'];
+const LS_BEST = 'ms_best';
+
+let diff = 'easy';
+let board = [];       // board[r][c] = { mine, revealed, flagged, adj }
+let state = 'idle';   // idle | playing | won | lost
+let firstClick = true;
+let flagMode = false;
+let timerVal = 0;
+let timerInterval = null;
+let minesLeft = 0;
+let revealedCount = 0;
+
+// ── localStorage best times ──
+function getBest(d) {
+  try { return JSON.parse(localStorage.getItem(LS_BEST)) || {}; } catch { return {}; }
+}
+function saveBest(d, t) {
+  const b = getBest();
+  if (!b[d] || t < b[d]) b[d] = t;
+  localStorage.setItem(LS_BEST, JSON.stringify(b));
+  return b[d];
+}
+
+// ── Board init ──
+function initBoard() {
+  const { rows, cols, mines, cell } = DIFF[diff];
+  document.getElementById('board').style.setProperty('--cell', cell + 'px');
+  document.getElementById('board').style.gridTemplateColumns = `repeat(${cols}, ${cell}px)`;
+
+  board = Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => ({ mine: false, revealed: false, flagged: false, adj: 0 }))
+  );
+  state = 'idle';
+  firstClick = true;
+  minesLeft = mines;
+  revealedCount = 0;
+  stopTimer();
+  timerVal = 0;
+  updateHeader();
+  renderBoard();
+  document.getElementById('reset-btn').textContent = '🙂';
+  updateBestBar();
+}
+
+function placeMines(safeR, safeC) {
+  const { rows, cols, mines } = DIFF[diff];
+  const safe = new Set();
+  for (let dr = -1; dr <= 1; dr++)
+    for (let dc = -1; dc <= 1; dc++) {
+      const r = safeR + dr, c = safeC + dc;
+      if (r >= 0 && r < rows && c >= 0 && c < cols) safe.add(r * cols + c);
+    }
+  const candidates = [];
+  for (let i = 0; i < rows * cols; i++) if (!safe.has(i)) candidates.push(i);
+  // Fisher-Yates shuffle first `mines` elements
+  for (let i = 0; i < mines; i++) {
+    const j = i + Math.floor(Math.random() * (candidates.length - i));
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    const idx = candidates[i];
+    board[Math.floor(idx / cols)][idx % cols].mine = true;
+  }
+  // calc adjacency
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++) {
+      if (board[r][c].mine) continue;
+      let cnt = 0;
+      eachNeighbor(r, c, (nr, nc) => { if (board[nr][nc].mine) cnt++; });
+      board[r][c].adj = cnt;
+    }
+}
+
+function eachNeighbor(r, c, fn) {
+  const { rows, cols } = DIFF[diff];
+  for (let dr = -1; dr <= 1; dr++)
+    for (let dc = -1; dc <= 1; dc++) {
+      if (!dr && !dc) continue;
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) fn(nr, nc);
+    }
+}
+
+// ── Game logic ──
+function reveal(r, c) {
+  const cell = board[r][c];
+  if (cell.revealed || cell.flagged) return;
+  cell.revealed = true;
+  revealedCount++;
+  if (cell.adj === 0 && !cell.mine) {
+    eachNeighbor(r, c, (nr, nc) => reveal(nr, nc));
+  }
+}
+
+function handleReveal(r, c) {
+  const cell = board[r][c];
+  if (cell.revealed || cell.flagged) return;
+
+  if (firstClick) {
+    firstClick = false;
+    placeMines(r, c);
+    startTimer();
+    state = 'playing';
+  }
+
+  if (cell.mine) {
+    cell.revealed = true;
+    cell.hit = true;
+    state = 'lost';
+    endGame(false);
+    return;
+  }
+
+  reveal(r, c);
+
+  const { rows, cols, mines } = DIFF[diff];
+  if (revealedCount === rows * cols - mines) {
+    state = 'won';
+    endGame(true);
+  }
+  renderBoard();
+}
+
+function handleFlag(r, c) {
+  if (state === 'lost' || state === 'won') return;
+  const cell = board[r][c];
+  if (cell.revealed) return;
+  cell.flagged = !cell.flagged;
+  minesLeft += cell.flagged ? -1 : 1;
+  updateHeader();
+  renderBoard();
+}
+
+// ── Chord (reveal neighbors when flagged count matches adj) ──
+function chordReveal(r, c) {
+  const cell = board[r][c];
+  if (!cell.revealed || cell.adj === 0) return;
+  let flagCount = 0;
+  eachNeighbor(r, c, (nr, nc) => { if (board[nr][nc].flagged) flagCount++; });
+  if (flagCount !== cell.adj) return;
+  eachNeighbor(r, c, (nr, nc) => {
+    if (!board[nr][nc].flagged && !board[nr][nc].revealed) handleReveal(nr, nc);
+  });
+}
+
+function endGame(won) {
+  stopTimer();
+  const { rows, cols } = DIFF[diff];
+  // reveal all mines
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++) {
+      const cell = board[r][c];
+      if (won && cell.mine) { cell.flagged = true; }
+      if (!won && cell.mine && !cell.flagged) cell.revealed = true;
+      if (!won && cell.flagged && !cell.mine) cell.wrong = true;
+    }
+  renderBoard();
+  document.getElementById('reset-btn').textContent = won ? '😎' : '😵';
+
+  setTimeout(() => {
+    const title = document.getElementById('result-title');
+    const msg = document.getElementById('result-msg');
+    title.textContent = won ? '클리어!' : '게임 오버';
+    if (won) {
+      const best = saveBest(diff, timerVal);
+      const newRec = best === timerVal;
+      msg.textContent = `시간: ${timerVal}초${newRec ? ' 🏆 최고 기록!' : '  (최고: ' + best + '초)'}`;
+      updateBestBar();
+    } else {
+      msg.textContent = '지뢰를 밟았습니다.';
+    }
+    document.getElementById('result').classList.remove('hidden');
+  }, 400);
+}
+
+// ── Timer ──
+function startTimer() {
+  timerInterval = setInterval(() => {
+    timerVal = Math.min(timerVal + 1, 999);
+    document.getElementById('timer-display').textContent = String(timerVal).padStart(3, '0');
+  }, 1000);
+}
+function stopTimer() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+}
+
+// ── UI ──
+function updateHeader() {
+  document.getElementById('flag-count').textContent = String(Math.max(minesLeft, 0)).padStart(3, '0');
+  document.getElementById('timer-display').textContent = String(timerVal).padStart(3, '0');
+}
+
+function updateBestBar() {
+  const b = getBest();
+  document.getElementById('best-time').textContent = b[diff] ? b[diff] + '초' : '-';
+}
+
+// ── Render ──
+function renderBoard() {
+  const { rows, cols } = DIFF[diff];
+  const boardEl = document.getElementById('board');
+  boardEl.innerHTML = '';
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = board[r][c];
+      const el = document.createElement('div');
+      el.className = 'cell';
+
+      if (cell.revealed) {
+        el.classList.add('revealed');
+        if (cell.mine) {
+          el.textContent = cell.hit ? '💥' : '💣';
+          if (cell.hit) el.classList.add('mine-hit');
+        } else if (cell.adj > 0) {
+          el.textContent = cell.adj;
+          el.dataset.n = cell.adj;
+        }
+      } else if (cell.flagged) {
+        el.textContent = cell.wrong ? '❌' : '🚩';
+        if (cell.wrong) el.classList.add('wrong');
+      }
+
+      const _r = r, _c = c;
+
+      // Desktop: left click reveal, right click flag
+      el.addEventListener('click', () => {
+        if (state === 'lost' || state === 'won') return;
+        if (flagMode) { handleFlag(_r, _c); return; }
+        if (cell.revealed) { chordReveal(_r, _c); return; }
+        handleReveal(_r, _c);
+      });
+      el.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        if (state === 'lost' || state === 'won') return;
+        handleFlag(_r, _c);
+      });
+
+      // Mobile: long press = flag
+      let longTimer, longFired;
+      el.addEventListener('touchstart', e => {
+        e.preventDefault();
+        longFired = false;
+        longTimer = setTimeout(() => {
+          longFired = true;
+          if (state !== 'lost' && state !== 'won') handleFlag(_r, _c);
+          renderBoard();
+        }, 450);
+      }, { passive: false });
+      el.addEventListener('touchend', e => {
+        clearTimeout(longTimer);
+        if (longFired) return;
+        if (state === 'lost' || state === 'won') return;
+        if (flagMode) { handleFlag(_r, _c); renderBoard(); return; }
+        if (cell.revealed) { chordReveal(_r, _c); }
+        else handleReveal(_r, _c);
+        renderBoard();
+      });
+      el.addEventListener('touchcancel', () => clearTimeout(longTimer));
+
+      boardEl.appendChild(el);
+    }
+  }
+}
+
+// ── Event wiring ──
+document.getElementById('reset-btn').addEventListener('click', () => {
+  document.getElementById('result').classList.add('hidden');
+  initBoard();
+});
+document.getElementById('result-btn').addEventListener('click', () => {
+  document.getElementById('result').classList.add('hidden');
+  initBoard();
+});
+document.getElementById('back-btn').addEventListener('click', () => {
+  window.location.href = 'index.html';
+});
+
+document.querySelectorAll('.diff-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    diff = btn.dataset.diff;
+    document.getElementById('result').classList.add('hidden');
+    initBoard();
+  });
+});
+
+const flagToggle = document.getElementById('flag-toggle');
+flagToggle.addEventListener('click', () => {
+  flagMode = !flagMode;
+  flagToggle.textContent = flagMode ? '🚩 깃발 모드 ON' : '🚩 깃발 모드 OFF';
+  flagToggle.classList.toggle('on', flagMode);
+});
+
+// ── Start ──
+initBoard();
+</script>
+</body>
+</html>
