@@ -168,8 +168,13 @@
     #btn-scores:hover { background: #2a4a7a; }
 
     /* ── Virtual pad ── */
+    #game-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
     #vpad {
-      display: none;
+      display: flex;
       flex-direction: column;
       align-items: center;
       gap: 10px;
@@ -223,7 +228,6 @@
       #next-canvas { width: 80px; height: 80px; }
       .keys { display: none; }
       #btn-start, #btn-scores { flex: 1 1 110px; padding: 8px; font-size: 12px; }
-      #vpad { display: flex; }
     }
   </style>
 </head>
@@ -244,7 +248,26 @@
 </div>
 
 <div id="app">
-  <canvas id="board" width="300" height="600"></canvas>
+  <div id="game-area">
+    <canvas id="board" width="300" height="600"></canvas>
+    <!-- Virtual pad -->
+    <div id="vpad">
+      <div class="vrow">
+        <button class="vbtn" id="vbtn-left">&#8592;</button>
+        <button class="vbtn" id="vbtn-rotate">&#8635;</button>
+        <button class="vbtn" id="vbtn-right">&#8594;</button>
+      </div>
+      <div class="vrow">
+        <button class="vbtn" id="vbtn-down">&#8595;</button>
+        <button class="vbtn vbtn-wide" id="vbtn-drop">&#11015; 즉시 낙하</button>
+      </div>
+      <div class="vrow vrow-util">
+        <button class="vbtn vbtn-sm" id="vbtn-restart">&#8635; 재시작</button>
+        <button class="vbtn vbtn-sm" id="vbtn-pause">&#9646;&#9646; 일시정지</button>
+        <button class="vbtn vbtn-sm" id="vbtn-hiscore">&#127942; 기록</button>
+      </div>
+    </div>
+  </div>
   <div id="sidebar">
     <div class="panel">
       <h3>점수</h3>
@@ -275,24 +298,6 @@
       <div>Space 즉시 낙하</div>
       <div>P 일시정지</div>
     </div>
-  </div>
-</div>
-
-<!-- Virtual pad (mobile) -->
-<div id="vpad">
-  <div class="vrow">
-    <button class="vbtn" id="vbtn-left">&#8592;</button>
-    <button class="vbtn" id="vbtn-rotate">&#8635;</button>
-    <button class="vbtn" id="vbtn-right">&#8594;</button>
-  </div>
-  <div class="vrow">
-    <button class="vbtn" id="vbtn-down">&#8595;</button>
-    <button class="vbtn vbtn-wide" id="vbtn-drop">&#11015; 즉시 낙하</button>
-  </div>
-  <div class="vrow vrow-util">
-    <button class="vbtn vbtn-sm" id="vbtn-restart">&#8635; 재시작</button>
-    <button class="vbtn vbtn-sm" id="vbtn-pause">&#9646;&#9646; 일시정지</button>
-    <button class="vbtn vbtn-sm" id="vbtn-hiscore">&#127942; 기록</button>
   </div>
 </div>
 
