@@ -2,726 +2,161 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>테트리스</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>게임 허브</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       background: #1a1a2e;
-      display: flex;
-      justify-content: center;
-      align-items: center;
       min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       font-family: 'Courier New', monospace;
       color: #eee;
+      padding: 32px 16px;
     }
-    #app {
-      display: flex;
-      gap: 24px;
-      align-items: flex-start;
-    }
-    canvas {
-      border: 2px solid #4a4a8a;
-      background: #0d0d1a;
-      display: block;
-    }
-    #sidebar {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      min-width: 140px;
-    }
-    .panel {
-      background: #16213e;
-      border: 1px solid #4a4a8a;
-      border-radius: 6px;
-      padding: 12px;
-    }
-    .panel h3 {
-      font-size: 12px;
-      color: #888;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 8px;
-    }
-    .panel .value {
-      font-size: 28px;
-      font-weight: bold;
-      color: #e0e0ff;
-    }
-    #next-canvas {
-      border: none;
-      background: transparent;
-    }
-    #btn-start {
-      width: 100%;
-      padding: 10px;
-      background: #4a4a8a;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      font-family: inherit;
-      transition: background 0.2s;
-    }
-    #btn-start:hover { background: #6a6aaa; }
-    .keys {
-      font-size: 11px;
-      color: #666;
-      line-height: 1.8;
-    }
-    #overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.7);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      gap: 16px;
-    }
-    #overlay h2 { font-size: 36px; color: #e0e0ff; }
-    #overlay p { color: #aaa; }
-    #overlay button {
-      padding: 12px 32px;
-      background: #4a4a8a;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 16px;
-      font-family: inherit;
-    }
-    #overlay button:hover { background: #6a6aaa; }
-    #overlay.hidden { display: none; }
-    #scores-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.75);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 100;
-    }
-    #scores-modal.hidden { display: none; }
-    .scores-box {
-      background: #16213e;
-      border: 1px solid #4a4a8a;
-      border-radius: 10px;
-      padding: 24px 32px;
-      min-width: 300px;
-    }
-    .scores-box h2 {
-      font-size: 20px;
-      color: #e0e0ff;
-      margin-bottom: 16px;
+
+    header {
       text-align: center;
+      margin-bottom: 48px;
+    }
+    header h1 {
+      font-size: 42px;
+      color: #e0e0ff;
+      letter-spacing: 4px;
+      text-shadow: 0 0 24px rgba(100, 100, 255, 0.5);
+    }
+    header p {
+      margin-top: 8px;
+      color: #555;
+      font-size: 13px;
+      letter-spacing: 2px;
+    }
+
+    .game-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 20px;
+      width: 100%;
+      max-width: 880px;
+    }
+
+    .game-card {
+      background: #16213e;
+      border: 1px solid #2a2a5a;
+      border-radius: 14px;
+      padding: 32px 20px 24px;
+      text-align: center;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .game-card:hover {
+      border-color: #5a5aaa;
+      transform: translateY(-4px);
+      box-shadow: 0 8px 32px rgba(80, 80, 200, 0.25);
+    }
+    .game-card:active { transform: translateY(-1px); }
+
+    .game-card .icon {
+      font-size: 52px;
+      line-height: 1;
+    }
+    .game-card .name {
+      font-size: 18px;
+      font-weight: bold;
+      color: #c8c8ff;
       letter-spacing: 1px;
     }
-    .scores-box table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
+    .game-card .desc {
+      font-size: 12px;
+      color: #556;
+      line-height: 1.6;
     }
-    .scores-box th {
-      color: #888;
-      font-weight: normal;
-      text-align: left;
-      padding: 4px 8px;
-      border-bottom: 1px solid #333;
+    .game-card .badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 99px;
+      letter-spacing: 1px;
     }
-    .scores-box td {
-      padding: 6px 8px;
-      color: #ccc;
-      border-bottom: 1px solid #1a1a2e;
+    .badge-ready {
+      background: #1a3a1a;
+      color: #4a8a4a;
+      border: 1px solid #2a5a2a;
     }
-    .scores-box td:first-child { color: #888; }
-    .scores-box tr:first-child td { color: #ffd700; font-weight: bold; }
-    .scores-box .no-scores { text-align: center; color: #555; padding: 20px 0; }
-    .scores-box .close-btn {
-      display: block;
-      width: 100%;
-      margin-top: 16px;
-      padding: 8px;
-      background: #4a4a8a;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 14px;
-    }
-    .scores-box .close-btn:hover { background: #6a6aaa; }
-    #btn-scores {
-      width: 100%;
-      padding: 8px;
-      background: #1e3a5a;
-      color: #aac;
-      border: 1px solid #4a4a8a;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-      font-family: inherit;
-      transition: background 0.2s;
-    }
-    #btn-scores:hover { background: #2a4a7a; }
-
-    /* ── Virtual pad ── */
-    #game-area {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    #vpad {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 0 16px;
-      width: 100%;
-    }
-    .vrow { display: flex; gap: 10px; justify-content: center; }
-    .vbtn {
-      width: 76px; height: 68px;
-      background: #16213e;
-      border: 2px solid #4a4a8a;
-      border-radius: 12px;
-      color: #c0c0ff;
-      font-size: 26px;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: none;
-      user-select: none;
-      transition: background 0.08s, transform 0.08s;
-    }
-    .vbtn:active, .vbtn.pressed {
-      background: #2e2e7a;
-      transform: scale(0.93);
-    }
-    .vbtn-wide { width: 162px; font-size: 16px; letter-spacing: 1px; }
-    .vrow-util { gap: 10px; }
-    .vbtn-sm {
-      width: 76px; height: 44px;
-      font-size: 13px;
-      background: #1e3a5a;
-      border-color: #3a5a8a;
+    .badge-soon {
+      background: #2a2a1a;
+      color: #6a6a3a;
+      border: 1px solid #4a4a2a;
     }
 
-    /* ── Mobile layout ── */
-    @media (max-width: 560px), (pointer: coarse) {
-      body { align-items: flex-start; padding: 8px 0 0; }
-      #app { flex-direction: column; align-items: center; gap: 0; }
-      #sidebar {
-        flex-direction: row;
-        flex-wrap: wrap;
-        width: 300px;
-        min-width: unset;
-        gap: 6px;
-        margin-bottom: 8px;
-        order: -1;
-      }
-      .panel { flex: 1 1 60px; padding: 6px 10px; }
-      .panel h3 { font-size: 10px; margin-bottom: 4px; }
-      .panel .value { font-size: 18px; }
-      #next-canvas { width: 80px; height: 80px; }
-      .keys { display: none; }
-      #btn-start, #btn-scores { flex: 1 1 110px; padding: 8px; font-size: 12px; }
+    .game-card.disabled {
+      opacity: 0.45;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    footer {
+      margin-top: 56px;
+      color: #333;
+      font-size: 11px;
+      letter-spacing: 1px;
     }
   </style>
 </head>
 <body>
 
-<div id="scores-modal" class="hidden">
-  <div class="scores-box">
-    <h2>명예의 전당</h2>
-    <div id="scores-content"></div>
-    <button class="close-btn" id="scores-close">닫기</button>
+<header>
+  <h1>GAME HUB</h1>
+  <p>플레이할 게임을 선택하세요</p>
+</header>
+
+<div class="game-grid">
+
+  <a class="game-card" href="tetris.html">
+    <span class="badge badge-ready">PLAY</span>
+    <div class="icon">🟦</div>
+    <div class="name">테트리스</div>
+    <div class="desc">블록을 쌓아 줄을 완성하세요.<br>최고점수에 도전!</div>
+  </a>
+
+  <div class="game-card disabled">
+    <span class="badge badge-soon">SOON</span>
+    <div class="icon">🐍</div>
+    <div class="name">스네이크</div>
+    <div class="desc">먹이를 먹으며 뱀을 길게<br>키워 나가세요.</div>
   </div>
+
+  <div class="game-card disabled">
+    <span class="badge badge-soon">SOON</span>
+    <div class="icon">💣</div>
+    <div class="name">지뢰찾기</div>
+    <div class="desc">지뢰를 피해 모든 칸을<br>안전하게 열어보세요.</div>
+  </div>
+
+  <div class="game-card disabled">
+    <span class="badge badge-soon">SOON</span>
+    <div class="icon">🧱</div>
+    <div class="name">벽돌깨기</div>
+    <div class="desc">공을 튕겨 모든 벽돌을<br>부수세요.</div>
+  </div>
+
 </div>
 
-<div id="overlay">
-  <h2>테트리스</h2>
-  <p>블록을 쌓아 줄을 완성하세요</p>
-  <button id="overlay-btn">시작하기</button>
-</div>
+<footer>© 2025 Game Hub</footer>
 
-<div id="app">
-  <div id="game-area">
-    <canvas id="board" width="300" height="600"></canvas>
-    <!-- Virtual pad -->
-    <div id="vpad">
-      <div class="vrow">
-        <button class="vbtn" id="vbtn-left">&#8592;</button>
-        <button class="vbtn" id="vbtn-rotate">&#8635;</button>
-        <button class="vbtn" id="vbtn-right">&#8594;</button>
-      </div>
-      <div class="vrow">
-        <button class="vbtn" id="vbtn-down">&#8595;</button>
-        <button class="vbtn vbtn-wide" id="vbtn-drop">&#11015; 즉시 낙하</button>
-      </div>
-      <div class="vrow vrow-util">
-        <button class="vbtn vbtn-sm" id="vbtn-restart">&#8635; 재시작</button>
-        <button class="vbtn vbtn-sm" id="vbtn-pause">&#9646;&#9646; 일시정지</button>
-        <button class="vbtn vbtn-sm" id="vbtn-hiscore">&#127942; 기록</button>
-      </div>
-    </div>
-  </div>
-  <div id="sidebar">
-    <div class="panel">
-      <h3>점수</h3>
-      <div class="value" id="score">0</div>
-    </div>
-    <div class="panel">
-      <h3>레벨</h3>
-      <div class="value" id="level">1</div>
-    </div>
-    <div class="panel">
-      <h3>줄</h3>
-      <div class="value" id="lines">0</div>
-    </div>
-    <div class="panel">
-      <h3>다음</h3>
-      <canvas id="next-canvas" width="120" height="120"></canvas>
-    </div>
-    <div class="panel">
-      <h3>최고점수</h3>
-      <div class="value" id="best-score">0</div>
-    </div>
-    <button id="btn-start">재시작</button>
-    <button id="btn-scores">기록 보기</button>
-    <div class="panel keys">
-      <div>← → 이동</div>
-      <div>↑ 회전</div>
-      <div>↓ 빠르게</div>
-      <div>Space 즉시 낙하</div>
-      <div>P 일시정지</div>
-    </div>
-  </div>
-</div>
-
-<script>
-const COLS = 10;
-const ROWS = 20;
-const BLOCK = 30;
-
-const COLORS = [
-  null,
-  '#00f0f0', // I - cyan
-  '#0000f0', // J - blue
-  '#f0a000', // L - orange
-  '#f0f000', // O - yellow
-  '#00f000', // S - green
-  '#a000f0', // T - purple
-  '#f00000', // Z - red
-];
-
-const SHAPES = [
-  null,
-  [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], // I
-  [[1,0,0],[1,1,1],[0,0,0]],                  // J
-  [[0,0,1],[1,1,1],[0,0,0]],                  // L
-  [[1,1],[1,1]],                               // O
-  [[0,1,1],[1,1,0],[0,0,0]],                  // S
-  [[0,1,0],[1,1,1],[0,0,0]],                  // T
-  [[1,1,0],[0,1,1],[0,0,0]],                  // Z
-];
-
-const SCORE_TABLE = [0, 100, 300, 500, 800];
-const LS_KEY = 'tetris_scores';
-const MAX_SCORES = 10;
-
-function loadScores() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; }
-  catch { return []; }
-}
-
-function saveScore(s) {
-  const scores = loadScores();
-  scores.push({ score: s, date: new Date().toLocaleString('ko-KR') });
-  scores.sort((a, b) => b.score - a.score);
-  scores.splice(MAX_SCORES);
-  localStorage.setItem(LS_KEY, JSON.stringify(scores));
-  return scores;
-}
-
-function getBestScore() {
-  const scores = loadScores();
-  return scores.length ? scores[0].score : 0;
-}
-
-function renderScoresModal() {
-  const scores = loadScores();
-  const el = document.getElementById('scores-content');
-  if (!scores.length) {
-    el.innerHTML = '<div class="no-scores">아직 기록이 없습니다</div>';
-    return;
-  }
-  const rows = scores.map((s, i) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td>${s.score.toLocaleString()}</td>
-      <td>${s.date}</td>
-    </tr>`).join('');
-  el.innerHTML = `<table>
-    <tr><th>#</th><th>점수</th><th>달성 시간</th></tr>
-    ${rows}
-  </table>`;
-}
-
-const canvas = document.getElementById('board');
-const ctx = canvas.getContext('2d');
-const nextCanvas = document.getElementById('next-canvas');
-const nextCtx = nextCanvas.getContext('2d');
-
-let board, piece, nextPiece, score, level, lines, gameOver, paused, animId, dropInterval, lastTime, dropCounter;
-
-function createBoard() {
-  return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
-}
-
-function randomPiece() {
-  const type = Math.floor(Math.random() * 7) + 1;
-  const shape = SHAPES[type].map(r => [...r]);
-  return {
-    type,
-    shape,
-    x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2),
-    y: 0,
-  };
-}
-
-function rotate(shape) {
-  const n = shape.length;
-  const m = shape[0].length;
-  const result = Array.from({ length: m }, () => new Array(n).fill(0));
-  for (let r = 0; r < n; r++)
-    for (let c = 0; c < m; c++)
-      result[c][n - 1 - r] = shape[r][c];
-  return result;
-}
-
-function collides(b, p, dx = 0, dy = 0, shape = p.shape) {
-  for (let r = 0; r < shape.length; r++) {
-    for (let c = 0; c < shape[r].length; c++) {
-      if (!shape[r][c]) continue;
-      const nx = p.x + c + dx;
-      const ny = p.y + r + dy;
-      if (nx < 0 || nx >= COLS || ny >= ROWS) return true;
-      if (ny >= 0 && b[ny][nx]) return true;
-    }
-  }
-  return false;
-}
-
-function merge(b, p) {
-  p.shape.forEach((row, r) => {
-    row.forEach((val, c) => {
-      if (val) b[p.y + r][p.x + c] = p.type;
-    });
-  });
-}
-
-function clearLines(b) {
-  let cleared = 0;
-  for (let r = ROWS - 1; r >= 0; r--) {
-    if (b[r].every(v => v)) {
-      b.splice(r, 1);
-      b.unshift(new Array(COLS).fill(0));
-      cleared++;
-      r++;
-    }
-  }
-  return cleared;
-}
-
-function calcDropInterval(lvl) {
-  return Math.max(100, 1000 - (lvl - 1) * 100);
-}
-
-function startGame() {
-  board = createBoard();
-  score = 0;
-  level = 1;
-  lines = 0;
-  gameOver = false;
-  paused = false;
-  dropCounter = 0;
-  dropInterval = calcDropInterval(level);
-  nextPiece = randomPiece();
-  spawnPiece();
-  updateUI();
-  if (animId) cancelAnimationFrame(animId);
-  lastTime = 0;
-  animId = requestAnimationFrame(loop);
-}
-
-function spawnPiece() {
-  piece = nextPiece;
-  nextPiece = randomPiece();
-  if (collides(board, piece)) {
-    gameOver = true;
-    const saved = saveScore(score);
-    const rank = saved.findIndex(s => s.score === score && s.date) + 1;
-    const isNew = rank === 1 && saved.length >= 1 && saved.filter(s => s.score === score).length === 1;
-    const msg = isNew
-      ? `최고 기록 달성! 점수: ${score.toLocaleString()}`
-      : `최종 점수: ${score.toLocaleString()}  (${rank}위)`;
-    showOverlay('게임 오버', msg);
-    document.getElementById('best-score').textContent = saved[0].score.toLocaleString();
-  }
-}
-
-function drop() {
-  if (collides(board, piece, 0, 1)) {
-    merge(board, piece);
-    const cleared = clearLines(board);
-    if (cleared) {
-      lines += cleared;
-      score += SCORE_TABLE[cleared] * level;
-      level = Math.floor(lines / 10) + 1;
-      dropInterval = calcDropInterval(level);
-    }
-    spawnPiece();
-  } else {
-    piece.y++;
-  }
-  dropCounter = 0;
-  updateUI();
-}
-
-function hardDrop() {
-  while (!collides(board, piece, 0, 1)) piece.y++;
-  drop();
-}
-
-function move(dir) {
-  if (!collides(board, piece, dir, 0)) piece.x += dir;
-}
-
-function rotatePiece() {
-  const rotated = rotate(piece.shape);
-  let dx = 0;
-  if (collides(board, piece, 0, 0, rotated)) {
-    dx = piece.x + rotated[0].length / 2 < COLS / 2 ? 1 : -1;
-    if (collides(board, { ...piece, x: piece.x + dx }, 0, 0, rotated)) return;
-  }
-  piece.shape = rotated;
-  piece.x += dx;
-}
-
-function ghostY() {
-  let gy = piece.y;
-  while (!collides(board, { ...piece, y: gy + 1 })) gy++;
-  return gy;
-}
-
-function drawBlock(c, x, y, color, alpha = 1) {
-  c.globalAlpha = alpha;
-  c.fillStyle = color;
-  c.fillRect(x * BLOCK + 1, y * BLOCK + 1, BLOCK - 2, BLOCK - 2);
-  c.fillStyle = 'rgba(255,255,255,0.15)';
-  c.fillRect(x * BLOCK + 1, y * BLOCK + 1, BLOCK - 2, 4);
-  c.fillStyle = 'rgba(0,0,0,0.2)';
-  c.fillRect(x * BLOCK + 1, y * BLOCK + BLOCK - 5, BLOCK - 2, 4);
-  c.globalAlpha = 1;
-}
-
-function drawBoard() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // grid
-  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-  ctx.lineWidth = 1;
-  for (let c = 0; c < COLS; c++) {
-    ctx.beginPath(); ctx.moveTo(c * BLOCK, 0); ctx.lineTo(c * BLOCK, canvas.height); ctx.stroke();
-  }
-  for (let r = 0; r < ROWS; r++) {
-    ctx.beginPath(); ctx.moveTo(0, r * BLOCK); ctx.lineTo(canvas.width, r * BLOCK); ctx.stroke();
-  }
-
-  // board cells
-  board.forEach((row, r) => {
-    row.forEach((val, c) => {
-      if (val) drawBlock(ctx, c, r, COLORS[val]);
-    });
-  });
-
-  if (!gameOver && piece) {
-    // ghost
-    const gy = ghostY();
-    piece.shape.forEach((row, r) => {
-      row.forEach((val, c) => {
-        if (val) drawBlock(ctx, piece.x + c, gy + r, COLORS[piece.type], 0.2);
-      });
-    });
-
-    // active piece
-    piece.shape.forEach((row, r) => {
-      row.forEach((val, c) => {
-        if (val) drawBlock(ctx, piece.x + c, piece.y + r, COLORS[piece.type]);
-      });
-    });
-  }
-}
-
-function drawNext() {
-  nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
-  if (!nextPiece) return;
-  const s = nextPiece.shape;
-  const offsetX = Math.floor((4 - s[0].length) / 2);
-  const offsetY = Math.floor((4 - s.length) / 2);
-  s.forEach((row, r) => {
-    row.forEach((val, c) => {
-      if (val) {
-        nextCtx.fillStyle = COLORS[nextPiece.type];
-        nextCtx.fillRect((offsetX + c) * 28 + 6, (offsetY + r) * 28 + 6, 26, 26);
-        nextCtx.fillStyle = 'rgba(255,255,255,0.15)';
-        nextCtx.fillRect((offsetX + c) * 28 + 6, (offsetY + r) * 28 + 6, 26, 4);
-      }
-    });
-  });
-}
-
-function updateUI() {
-  document.getElementById('score').textContent = score;
-  document.getElementById('level').textContent = level;
-  document.getElementById('lines').textContent = lines;
-  document.getElementById('best-score').textContent = Math.max(getBestScore(), score).toLocaleString();
-  drawNext();
-}
-
-function loop(timestamp) {
-  if (!paused && !gameOver) {
-    const delta = timestamp - lastTime;
-    lastTime = timestamp;
-    dropCounter += delta;
-    if (dropCounter >= dropInterval) drop();
-    drawBoard();
-  }
-  animId = requestAnimationFrame(loop);
-}
-
-function showOverlay(title, subtitle) {
-  const overlay = document.getElementById('overlay');
-  overlay.querySelector('h2').textContent = title;
-  overlay.querySelector('p').textContent = subtitle;
-  overlay.querySelector('button').textContent = '다시 시작';
-  overlay.classList.remove('hidden');
-}
-
-document.getElementById('best-score').textContent = getBestScore().toLocaleString();
-
-document.getElementById('overlay-btn').addEventListener('click', () => {
-  document.getElementById('overlay').classList.add('hidden');
-  startGame();
-});
-
-document.getElementById('btn-start').addEventListener('click', () => {
-  document.getElementById('overlay').classList.add('hidden');
-  startGame();
-});
-
-document.getElementById('btn-scores').addEventListener('click', () => {
-  renderScoresModal();
-  document.getElementById('scores-modal').classList.remove('hidden');
-});
-
-document.getElementById('scores-close').addEventListener('click', () => {
-  document.getElementById('scores-modal').classList.add('hidden');
-});
-
-// ── Virtual pad ──
-function bindVBtn(id, action, { repeat = true, repeatDelay = 150, repeatInterval = 80 } = {}) {
-  const btn = document.getElementById(id);
-  if (!btn) return;
-  let timer;
-
-  function press(e) {
-    e.preventDefault();
-    btn.classList.add('pressed');
-    if (!gameOver && !paused) action();
-    if (repeat) {
-      timer = setTimeout(() => {
-        timer = setInterval(() => {
-          if (!gameOver && !paused) action();
-        }, repeatInterval);
-      }, repeatDelay);
-    }
-  }
-
-  function release() {
-    btn.classList.remove('pressed');
-    clearTimeout(timer);
-    clearInterval(timer);
-  }
-
-  btn.addEventListener('touchstart', press, { passive: false });
-  btn.addEventListener('touchend',   release);
-  btn.addEventListener('touchcancel',release);
-  btn.addEventListener('mousedown',  press);
-  btn.addEventListener('mouseup',    release);
-  btn.addEventListener('mouseleave', release);
-}
-
-bindVBtn('vbtn-left',   () => move(-1));
-bindVBtn('vbtn-right',  () => move(1));
-bindVBtn('vbtn-down',   () => drop());
-bindVBtn('vbtn-rotate', () => rotatePiece(), { repeat: false });
-bindVBtn('vbtn-drop',   () => hardDrop(),    { repeat: false });
-
-document.getElementById('vbtn-restart').addEventListener('touchstart', e => {
-  e.preventDefault();
-  document.getElementById('overlay').classList.add('hidden');
-  startGame();
-}, { passive: false });
-document.getElementById('vbtn-restart').addEventListener('click', () => {
-  document.getElementById('overlay').classList.add('hidden');
-  startGame();
-});
-
-document.getElementById('vbtn-pause').addEventListener('touchstart', e => {
-  e.preventDefault();
-  if (!gameOver) {
-    paused = !paused;
-    if (!paused) lastTime = performance.now();
-    document.getElementById('vbtn-pause').textContent = paused ? '▶ 재개' : '⏸ 일시정지';
-  }
-}, { passive: false });
-document.getElementById('vbtn-pause').addEventListener('click', () => {
-  if (!gameOver) {
-    paused = !paused;
-    if (!paused) lastTime = performance.now();
-    document.getElementById('vbtn-pause').textContent = paused ? '▶ 재개' : '⏸ 일시정지';
-  }
-});
-
-document.getElementById('vbtn-hiscore').addEventListener('touchstart', e => {
-  e.preventDefault();
-  renderScoresModal();
-  document.getElementById('scores-modal').classList.remove('hidden');
-}, { passive: false });
-document.getElementById('vbtn-hiscore').addEventListener('click', () => {
-  renderScoresModal();
-  document.getElementById('scores-modal').classList.remove('hidden');
-});
-
-document.addEventListener('keydown', e => {
-  if (gameOver) return;
-  switch (e.key) {
-    case 'ArrowLeft':  e.preventDefault(); move(-1); break;
-    case 'ArrowRight': e.preventDefault(); move(1);  break;
-    case 'ArrowDown':  e.preventDefault(); drop();   break;
-    case 'ArrowUp':    e.preventDefault(); rotatePiece(); break;
-    case ' ':          e.preventDefault(); hardDrop(); break;
-    case 'p': case 'P':
-      paused = !paused;
-      if (!paused) lastTime = performance.now();
-      document.getElementById('vbtn-pause').textContent = paused ? '▶ 재개' : '⏸ 일시정지';
-      break;
-  }
-});
-</script>
 </body>
 </html>
