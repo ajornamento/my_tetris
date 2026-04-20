@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>테트리스</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -165,6 +166,65 @@
       transition: background 0.2s;
     }
     #btn-scores:hover { background: #2a4a7a; }
+
+    /* ── Virtual pad ── */
+    #vpad {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 0 16px;
+      width: 100%;
+    }
+    .vrow { display: flex; gap: 10px; justify-content: center; }
+    .vbtn {
+      width: 76px; height: 68px;
+      background: #16213e;
+      border: 2px solid #4a4a8a;
+      border-radius: 12px;
+      color: #c0c0ff;
+      font-size: 26px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
+      user-select: none;
+      transition: background 0.08s, transform 0.08s;
+    }
+    .vbtn:active, .vbtn.pressed {
+      background: #2e2e7a;
+      transform: scale(0.93);
+    }
+    .vbtn-wide { width: 162px; font-size: 16px; letter-spacing: 1px; }
+    .vrow-util { gap: 10px; }
+    .vbtn-sm {
+      width: 76px; height: 44px;
+      font-size: 13px;
+      background: #1e3a5a;
+      border-color: #3a5a8a;
+    }
+
+    /* ── Mobile layout ── */
+    @media (max-width: 560px), (pointer: coarse) {
+      body { align-items: flex-start; padding: 8px 0 0; }
+      #app { flex-direction: column; align-items: center; gap: 0; }
+      #sidebar {
+        flex-direction: row;
+        flex-wrap: wrap;
+        width: 300px;
+        min-width: unset;
+        gap: 6px;
+        margin-bottom: 8px;
+        order: -1;
+      }
+      .panel { flex: 1 1 60px; padding: 6px 10px; }
+      .panel h3 { font-size: 10px; margin-bottom: 4px; }
+      .panel .value { font-size: 18px; }
+      #next-canvas { width: 80px; height: 80px; }
+      .keys { display: none; }
+      #btn-start, #btn-scores { flex: 1 1 110px; padding: 8px; font-size: 12px; }
+      #vpad { display: flex; }
+    }
   </style>
 </head>
 <body>
@@ -215,6 +275,24 @@
       <div>Space 즉시 낙하</div>
       <div>P 일시정지</div>
     </div>
+  </div>
+</div>
+
+<!-- Virtual pad (mobile) -->
+<div id="vpad">
+  <div class="vrow">
+    <button class="vbtn" id="vbtn-left">&#8592;</button>
+    <button class="vbtn" id="vbtn-rotate">&#8635;</button>
+    <button class="vbtn" id="vbtn-right">&#8594;</button>
+  </div>
+  <div class="vrow">
+    <button class="vbtn" id="vbtn-down">&#8595;</button>
+    <button class="vbtn vbtn-wide" id="vbtn-drop">&#11015; 즉시 낙하</button>
+  </div>
+  <div class="vrow vrow-util">
+    <button class="vbtn vbtn-sm" id="vbtn-restart">&#8635; 재시작</button>
+    <button class="vbtn vbtn-sm" id="vbtn-pause">&#9646;&#9646; 일시정지</button>
+    <button class="vbtn vbtn-sm" id="vbtn-hiscore">&#127942; 기록</button>
   </div>
 </div>
 
@@ -549,6 +627,81 @@ document.getElementById('scores-close').addEventListener('click', () => {
   document.getElementById('scores-modal').classList.add('hidden');
 });
 
+// ── Virtual pad ──
+function bindVBtn(id, action, { repeat = true, repeatDelay = 150, repeatInterval = 80 } = {}) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  let timer;
+
+  function press(e) {
+    e.preventDefault();
+    btn.classList.add('pressed');
+    if (!gameOver && !paused) action();
+    if (repeat) {
+      timer = setTimeout(() => {
+        timer = setInterval(() => {
+          if (!gameOver && !paused) action();
+        }, repeatInterval);
+      }, repeatDelay);
+    }
+  }
+
+  function release() {
+    btn.classList.remove('pressed');
+    clearTimeout(timer);
+    clearInterval(timer);
+  }
+
+  btn.addEventListener('touchstart', press, { passive: false });
+  btn.addEventListener('touchend',   release);
+  btn.addEventListener('touchcancel',release);
+  btn.addEventListener('mousedown',  press);
+  btn.addEventListener('mouseup',    release);
+  btn.addEventListener('mouseleave', release);
+}
+
+bindVBtn('vbtn-left',   () => move(-1));
+bindVBtn('vbtn-right',  () => move(1));
+bindVBtn('vbtn-down',   () => drop());
+bindVBtn('vbtn-rotate', () => rotatePiece(), { repeat: false });
+bindVBtn('vbtn-drop',   () => hardDrop(),    { repeat: false });
+
+document.getElementById('vbtn-restart').addEventListener('touchstart', e => {
+  e.preventDefault();
+  document.getElementById('overlay').classList.add('hidden');
+  startGame();
+}, { passive: false });
+document.getElementById('vbtn-restart').addEventListener('click', () => {
+  document.getElementById('overlay').classList.add('hidden');
+  startGame();
+});
+
+document.getElementById('vbtn-pause').addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (!gameOver) {
+    paused = !paused;
+    if (!paused) lastTime = performance.now();
+    document.getElementById('vbtn-pause').textContent = paused ? '▶ 재개' : '⏸ 일시정지';
+  }
+}, { passive: false });
+document.getElementById('vbtn-pause').addEventListener('click', () => {
+  if (!gameOver) {
+    paused = !paused;
+    if (!paused) lastTime = performance.now();
+    document.getElementById('vbtn-pause').textContent = paused ? '▶ 재개' : '⏸ 일시정지';
+  }
+});
+
+document.getElementById('vbtn-hiscore').addEventListener('touchstart', e => {
+  e.preventDefault();
+  renderScoresModal();
+  document.getElementById('scores-modal').classList.remove('hidden');
+}, { passive: false });
+document.getElementById('vbtn-hiscore').addEventListener('click', () => {
+  renderScoresModal();
+  document.getElementById('scores-modal').classList.remove('hidden');
+});
+
 document.addEventListener('keydown', e => {
   if (gameOver) return;
   switch (e.key) {
@@ -559,7 +712,8 @@ document.addEventListener('keydown', e => {
     case ' ':          e.preventDefault(); hardDrop(); break;
     case 'p': case 'P':
       paused = !paused;
-      if (!paused) { lastTime = performance.now(); }
+      if (!paused) lastTime = performance.now();
+      document.getElementById('vbtn-pause').textContent = paused ? '▶ 재개' : '⏸ 일시정지';
       break;
   }
 });
