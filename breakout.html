@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>벽돌깨기</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #1a1a2e;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Courier New', monospace;
+      color: #eee;
+    }
+    #app {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+    }
+    #canvas-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    canvas {
+      border: 2px solid #8a4a8a;
+      background: #0d0d1a;
+      display: block;
+      touch-action: none;
+    }
+    /* 모바일 패들 슬라이더 */
+    #paddle-bar {
+      display: none;
+      width: 100%;
+      max-width: 360px;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    #paddle-bar label {
+      font-size: 11px;
+      color: #666;
+      letter-spacing: 1px;
+    }
+    #paddle-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      background: #2a1a3a;
+      outline: none;
+      cursor: pointer;
+    }
+    #paddle-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #aa44aa;
+      cursor: pointer;
+    }
+    #paddle-slider::-moz-range-thumb {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #aa44aa;
+      cursor: pointer;
+      border: none;
+    }
+    #sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 140px;
+    }
+    .panel {
+      background: #16213e;
+      border: 1px solid #5a2a5a;
+      border-radius: 6px;
+      padding: 12px;
+    }
+    .panel h3 {
+      font-size: 12px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .panel .value {
+      font-size: 28px;
+      font-weight: bold;
+      color: #e0e0ff;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-family: inherit;
+      transition: background 0.2s;
+    }
+    #btn-start  { background: #6a2a6a; }
+    #btn-scores { background: #2a4a2a; }
+    #btn-hub    { background: #2a2a4a; }
+    #btn-start:hover  { background: #8a4a8a; }
+    #btn-scores:hover { background: #4a6a4a; }
+    #btn-hub:hover    { background: #4a4a6a; }
+    .keys {
+      font-size: 11px;
+      color: #666;
+      line-height: 1.8;
+    }
+    @media (max-width: 600px) {
+      body { align-items: flex-start; padding: 16px 8px; }
+      #app { flex-direction: column; align-items: center; gap: 12px; }
+      #sidebar { min-width: unset; width: 100%; max-width: 360px; }
+      #paddle-bar { display: flex; }
+    }
+    /* 점수판 오버레이 */
+    #scores-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 10;
+      justify-content: center;
+      align-items: center;
+    }
+    #scores-overlay.show { display: flex; }
+    #scores-box {
+      background: #16213e;
+      border: 1px solid #5a2a5a;
+      border-radius: 12px;
+      padding: 28px 36px;
+      min-width: 240px;
+      text-align: center;
+    }
+    #scores-box h2 { color: #dd88ff; letter-spacing: 2px; margin-bottom: 20px; font-size: 18px; }
+    #scores-list {
+      list-style: none;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    #scores-list li {
+      padding: 6px 0;
+      border-bottom: 1px solid #223;
+      font-size: 14px;
+      color: #ccc;
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    #scores-list li:last-child { border-bottom: none; }
+    #scores-list .rank { color: #556; }
+    #scores-list .hi   { color: #dd88ff; }
+    #btn-scores-close {
+      padding: 8px 24px;
+      background: #6a2a6a;
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-family: inherit;
+      cursor: pointer;
+      font-size: 14px;
+      width: auto;
+    }
+    #btn-scores-close:hover { background: #8a4a8a; }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <div id="canvas-wrap">
+    <canvas id="canvas"></canvas>
+    <div id="paddle-bar">
+      <label>패들 조작</label>
+      <input type="range" id="paddle-slider" min="0" max="1000" value="500">
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <div class="panel">
+      <h3>점수</h3>
+      <div class="value" id="score-display">0</div>
+    </div>
+    <div class="panel">
+      <h3>최고 점수</h3>
+      <div class="value" id="best-display">0</div>
+    </div>
+    <div class="panel">
+      <h3>레벨</h3>
+      <div class="value" id="level-display">1</div>
+    </div>
+    <div class="panel">
+      <h3>목숨</h3>
+      <div class="value" id="lives-display">❤️❤️❤️</div>
+    </div>
+    <button type="button" id="btn-start">시작</button>
+    <button type="button" id="btn-scores">최고 기록</button>
+    <button type="button" id="btn-hub">← 허브</button>
+    <div class="panel">
+      <h3>조작</h3>
+      <div class="keys">
+        ← / → : 패들 이동<br>
+        A / D  : 패들 이동<br>
+        마우스  : 패들 조작<br>
+        P      : 일시정지
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="scores-overlay">
+  <div id="scores-box">
+    <h2>🏆 최고 기록</h2>
+    <ol id="scores-list"></ol>
+    <button type="button" id="btn-scores-close">닫기</button>
+  </div>
+</div>
+
+<script>
+  /* ── 캔버스 설정 ── */
+  const CW = 360, CH = 520;
+  const canvas = document.getElementById('canvas');
+  const ctx    = canvas.getContext('2d');
+  canvas.width  = CW;
+  canvas.height = CH;
+
+  /* ── 상수 ── */
+  const BRICK_COLS   = 9;
+  const BRICK_ROWS   = 6;
+  const BRICK_W      = Math.floor((CW - 20) / BRICK_COLS);
+  const BRICK_H      = 18;
+  const BRICK_PAD    = 3;
+  const BRICK_TOP    = 40;
+  const BRICK_LEFT   = 10;
+
+  const PADDLE_W     = 70;
+  const PADDLE_H     = 10;
+  const PADDLE_Y     = CH - 36;
+  const BALL_R       = 7;
+  const BASE_SPEED   = 4.2;
+  const SPEED_INC    = 0.25;   // 레벨당 속도 증가
+  const LIVES_MAX    = 3;
+
+  /* 벽돌 색상 (행별) */
+  const ROW_COLORS = [
+    '#ff4466', '#ff6633', '#ffaa22',
+    '#22cc88', '#2288ff', '#aa44ff',
+  ];
+  /* 행별 점수 */
+  const ROW_SCORES = [7, 6, 5, 4, 3, 2];
+
+  /* ── 상태 ── */
+  let paddle, ball, bricks, score, lives, level;
+  let state  = 'idle'; // idle | running | paused | dead | clear
+  let ballLaunched = false;
+  let keys   = {};
+  let raf    = null;
+  let lastTime = 0;
+
+  /* ── 로컬스토리지 ── */
+  const LS_KEY = 'breakout_scores';
+  function loadScores() { try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; } catch { return []; } }
+  function saveScore(s) {
+    const list = loadScores(); list.push(s); list.sort((a,b)=>b-a); list.splice(10);
+    localStorage.setItem(LS_KEY, JSON.stringify(list));
+  }
+  function bestScore() { const l = loadScores(); return l.length ? l[0] : 0; }
+
+  /* ── 초기화 ── */
+  function makeBricks() {
+    const arr = [];
+    for (let r = 0; r < BRICK_ROWS; r++) {
+      for (let c = 0; c < BRICK_COLS; c++) {
+        /* 레벨 3+ 부터 일부 벽돌이 2타 */
+        const hp = (level >= 3 && r < 2) ? 2 : 1;
+        arr.push({ r, c, hp, maxHp: hp, alive: true });
+      }
+    }
+    return arr;
+  }
+
+  function resetBall() {
+    ball = {
+      x: paddle.x + PADDLE_W / 2,
+      y: PADDLE_Y - BALL_R - 1,
+      vx: 0, vy: 0,
+    };
+    ballLaunched = false;
+  }
+
+  function initLevel() {
+    paddle = { x: (CW - PADDLE_W) / 2 };
+    bricks = makeBricks();
+    resetBall();
+  }
+
+  function init() {
+    score  = 0;
+    lives  = LIVES_MAX;
+    level  = 1;
+    initLevel();
+    updateHUD();
+  }
+
+  /* ── 런치 ── */
+  function launchBall() {
+    if (ballLaunched) return;
+    const spd = BASE_SPEED + (level - 1) * SPEED_INC;
+    const angle = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI / 4);
+    ball.vx = Math.cos(angle) * spd;
+    ball.vy = Math.sin(angle) * spd;
+    ballLaunched = true;
+  }
+
+  /* ── 게임 루프 ── */
+  function startLoop() {
+    if (raf) cancelAnimationFrame(raf);
+    lastTime = performance.now();
+    raf = requestAnimationFrame(loop);
+  }
+
+  function loop(ts) {
+    const dt = Math.min(ts - lastTime, 32); // 최대 32ms 클램프
+    lastTime = ts;
+    if (state === 'running') update(dt);
+    draw();
+    raf = requestAnimationFrame(loop);
+  }
+
+  function update(dt) {
+    const factor = dt / (1000 / 60); // 60fps 기준 정규화
+
+    /* 패들 키보드 이동 */
+    const pspd = 6 * factor;
+    if (keys['ArrowLeft'] || keys['a'] || keys['A']) paddle.x -= pspd;
+    if (keys['ArrowRight'] || keys['d'] || keys['D']) paddle.x += pspd;
+    paddle.x = Math.max(0, Math.min(CW - PADDLE_W, paddle.x));
+
+    /* 공이 발사 안 됐으면 패들에 붙어 이동 */
+    if (!ballLaunched) {
+      ball.x = paddle.x + PADDLE_W / 2;
+      return;
+    }
+
+    /* 공 이동 */
+    ball.x += ball.vx * factor;
+    ball.y += ball.vy * factor;
+
+    /* 벽 반사 */
+    if (ball.x - BALL_R < 0) { ball.x = BALL_R; ball.vx = Math.abs(ball.vx); }
+    if (ball.x + BALL_R > CW) { ball.x = CW - BALL_R; ball.vx = -Math.abs(ball.vx); }
+    if (ball.y - BALL_R < 0) { ball.y = BALL_R; ball.vy = Math.abs(ball.vy); }
+
+    /* 패들 충돌 */
+    if (
+      ball.vy > 0 &&
+      ball.y + BALL_R >= PADDLE_Y &&
+      ball.y + BALL_R <= PADDLE_Y + PADDLE_H + 2 &&
+      ball.x >= paddle.x - BALL_R &&
+      ball.x <= paddle.x + PADDLE_W + BALL_R
+    ) {
+      ball.y = PADDLE_Y - BALL_R;
+      /* 패들 어느 부분에 맞았냐에 따라 각도 변화 */
+      const rel  = (ball.x - paddle.x) / PADDLE_W; // 0~1
+      const angle = (rel - 0.5) * (Math.PI * 0.7); // -63°~+63°
+      const spd  = Math.hypot(ball.vx, ball.vy);
+      ball.vx = Math.sin(angle) * spd;
+      ball.vy = -Math.abs(Math.cos(angle) * spd);
+    }
+
+    /* 바닥 탈출 */
+    if (ball.y - BALL_R > CH) {
+      lives--;
+      updateHUD();
+      if (lives <= 0) {
+        die(); return;
+      }
+      resetBall();
+      return;
+    }
+
+    /* 벽돌 충돌 */
+    for (const b of bricks) {
+      if (!b.alive) continue;
+      const bx = BRICK_LEFT + b.c * BRICK_W;
+      const by = BRICK_TOP  + b.r * BRICK_H;
+      const bx2 = bx + BRICK_W - BRICK_PAD;
+      const by2 = by + BRICK_H - BRICK_PAD;
+
+      if (ball.x + BALL_R < bx || ball.x - BALL_R > bx2) continue;
+      if (ball.y + BALL_R < by || ball.y - BALL_R > by2) continue;
+
+      b.hp--;
+      if (b.hp <= 0) {
+        b.alive = false;
+        score += ROW_SCORES[b.r] * level;
+        updateHUD();
+      }
+
+      /* 어느 면에 맞았는지 판별 */
+      const overlapLeft  = ball.x + BALL_R - bx;
+      const overlapRight = bx2 - (ball.x - BALL_R);
+      const overlapTop   = ball.y + BALL_R - by;
+      const overlapBot   = by2 - (ball.y - BALL_R);
+      const minH = Math.min(overlapLeft, overlapRight);
+      const minV = Math.min(overlapTop,  overlapBot);
+      if (minH < minV) { ball.vx *= -1; } else { ball.vy *= -1; }
+      break;
+    }
+
+    /* 스테이지 클리어 */
+    if (bricks.every(b => !b.alive)) {
+      level++;
+      initLevel();
+      /* 속도 유지하면서 레벨업 */
+      const spd = BASE_SPEED + (level - 1) * SPEED_INC;
+      const angle = -Math.PI / 2;
+      ball.vx = Math.cos(angle) * spd;
+      ball.vy = Math.sin(angle) * spd;
+      /* 레벨업 보너스 */
+      score += 100 * (level - 1);
+      updateHUD();
+    }
+  }
+
+  function die() {
+    state = 'dead';
+    saveScore(score);
+    updateHUD();
+  }
+
+  /* ── HUD ── */
+  function updateHUD() {
+    document.getElementById('score-display').textContent = score;
+    document.getElementById('level-display').textContent = level;
+    document.getElementById('best-display').textContent  = bestScore();
+    document.getElementById('lives-display').textContent = '❤️'.repeat(Math.max(0, lives));
+  }
+
+  /* ── 그리기 ── */
+  const BALL_GLOW  = '#dd88ff';
+  const PADDLE_COL = '#aa44cc';
+  const PADDLE_HIGH= '#dd88ff';
+
+  function draw() {
+    ctx.fillStyle = '#0d0d1a';
+    ctx.fillRect(0, 0, CW, CH);
+
+    /* 격자 */
+    ctx.strokeStyle = '#111820';
+    ctx.lineWidth = 0.5;
+    for (let x = 0; x <= CW; x += 20) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,CH); ctx.stroke(); }
+    for (let y = 0; y <= CH; y += 20) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(CW,y); ctx.stroke(); }
+
+    /* 벽돌 */
+    for (const b of bricks) {
+      if (!b.alive) continue;
+      const bx = BRICK_LEFT + b.c * BRICK_W + BRICK_PAD / 2;
+      const by = BRICK_TOP  + b.r * BRICK_H + BRICK_PAD / 2;
+      const bw = BRICK_W - BRICK_PAD;
+      const bh = BRICK_H - BRICK_PAD;
+      const col = ROW_COLORS[b.r];
+      /* 2타 벽돌은 어둡게 */
+      ctx.fillStyle = b.hp < b.maxHp ? darken(col, 0.5) : col;
+      roundRect(ctx, bx, by, bw, bh, 3);
+      ctx.fill();
+      /* 하이라이트 */
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      roundRect(ctx, bx+2, by+2, bw-4, 4, 2);
+      ctx.fill();
+    }
+
+    /* 패들 */
+    const grad = ctx.createLinearGradient(paddle.x, PADDLE_Y, paddle.x, PADDLE_Y + PADDLE_H);
+    grad.addColorStop(0, PADDLE_HIGH);
+    grad.addColorStop(1, PADDLE_COL);
+    ctx.fillStyle = grad;
+    roundRect(ctx, paddle.x, PADDLE_Y, PADDLE_W, PADDLE_H, 5);
+    ctx.fill();
+
+    /* 공 */
+    ctx.shadowColor  = BALL_GLOW;
+    ctx.shadowBlur   = 12;
+    ctx.fillStyle    = BALL_GLOW;
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur   = 0;
+
+    /* 오버레이 */
+    if (state === 'idle') {
+      drawOverlay('BREAKOUT', '시작 버튼 또는 스페이스');
+    } else if (state === 'paused') {
+      drawOverlay('PAUSE', 'P 키로 재개');
+    } else if (state === 'dead') {
+      drawOverlay('GAME OVER', `점수: ${score}`);
+    } else if (!ballLaunched) {
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(200,150,255,0.55)';
+      ctx.font = '13px Courier New';
+      ctx.fillText('스페이스 / 화면 터치로 발사', CW/2, CH - 12);
+    }
+  }
+
+  function drawOverlay(title, sub) {
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0, 0, CW, CH);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#dd88ff';
+    ctx.font = 'bold 36px Courier New';
+    ctx.fillText(title, CW/2, CH/2 - 20);
+    ctx.fillStyle = '#aa66cc';
+    ctx.font = '16px Courier New';
+    ctx.fillText(sub, CW/2, CH/2 + 18);
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+    ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+    ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+    ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+    ctx.closePath();
+  }
+
+  function darken(hex, f) {
+    const n = parseInt(hex.slice(1), 16);
+    const r = Math.round(((n>>16)&0xff)*f);
+    const g = Math.round(((n>>8) &0xff)*f);
+    const b = Math.round(( n     &0xff)*f);
+    return `rgb(${r},${g},${b})`;
+  }
+
+  /* ── 컨트롤 ── */
+  document.getElementById('btn-start').addEventListener('click', () => {
+    init();
+    state = 'running';
+    document.getElementById('btn-start').textContent = '다시 시작';
+    startLoop();
+  });
+
+  document.getElementById('btn-hub').addEventListener('click', () => {
+    window.location.href = 'index.html';
+  });
+
+  document.getElementById('btn-scores').addEventListener('click', showScores);
+  document.getElementById('btn-scores-close').addEventListener('click', () => {
+    document.getElementById('scores-overlay').classList.remove('show');
+  });
+
+  function showScores() {
+    const list = loadScores();
+    const ol = document.getElementById('scores-list');
+    ol.innerHTML = '';
+    if (!list.length) {
+      ol.innerHTML = '<li style="color:#556;justify-content:center;">기록 없음</li>';
+    } else {
+      list.forEach((s,i) => {
+        const li = document.createElement('li');
+        li.innerHTML = `<span class="rank">#${i+1}</span><span class="hi">${s}</span>`;
+        ol.appendChild(li);
+      });
+    }
+    document.getElementById('scores-overlay').classList.add('show');
+  }
+
+  /* 키보드 */
+  document.addEventListener('keydown', e => {
+    keys[e.key] = true;
+    if (e.key === ' ') {
+      e.preventDefault();
+      if (state === 'idle' || state === 'dead') {
+        init(); state = 'running';
+        document.getElementById('btn-start').textContent = '다시 시작';
+        startLoop();
+      } else if (state === 'running') {
+        launchBall();
+      }
+    }
+    if (e.key === 'p' || e.key === 'P') {
+      if (state === 'running') state = 'paused';
+      else if (state === 'paused') state = 'running';
+    }
+    if (['ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+  });
+  document.addEventListener('keyup', e => { keys[e.key] = false; });
+
+  /* 마우스 패들 */
+  canvas.addEventListener('mousemove', e => {
+    if (state !== 'running') return;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = CW / rect.width;
+    const mx = (e.clientX - rect.left) * scaleX;
+    paddle.x = Math.max(0, Math.min(CW - PADDLE_W, mx - PADDLE_W / 2));
+  });
+
+  /* 터치 – 패들 + 발사 */
+  canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (state === 'running') launchBall();
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (state !== 'running') return;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = CW / rect.width;
+    const mx = (e.touches[0].clientX - rect.left) * scaleX;
+    paddle.x = Math.max(0, Math.min(CW - PADDLE_W, mx - PADDLE_W / 2));
+  }, { passive: false });
+
+  /* 슬라이더 (모바일 대체 조작) */
+  const slider = document.getElementById('paddle-slider');
+  slider.addEventListener('input', () => {
+    if (state !== 'running') return;
+    const ratio = slider.value / 1000;
+    paddle.x = ratio * (CW - PADDLE_W);
+  });
+
+  /* ── 시작 화면 ── */
+  init();
+  draw();
+</script>
+</body>
+</html>
