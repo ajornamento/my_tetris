@@ -468,53 +468,22 @@ function renderBoard() {
         if (cell.wrong) el.classList.add('wrong');
       }
 
-      const _r = r, _c = c;
+      // data 속성으로 위치 저장 (터치 이벤트 위임에서 사용)
+      el.dataset.r = r;
+      el.dataset.c = c;
 
       // Desktop: left click reveal, right click flag
       el.addEventListener('click', () => {
         if (state === 'lost' || state === 'won') return;
-        if (flagMode) { handleFlag(_r, _c); return; }
-        if (cell.revealed) { chordReveal(_r, _c); return; }
-        handleReveal(_r, _c);
+        if (flagMode) { handleFlag(r, c); return; }
+        if (cell.revealed) { chordReveal(r, c); return; }
+        handleReveal(r, c);
       });
       el.addEventListener('contextmenu', e => {
         e.preventDefault();
         if (state === 'lost' || state === 'won') return;
-        handleFlag(_r, _c);
+        handleFlag(r, c);
       });
-
-      // Mobile: long press = flag, scroll detection cancels action
-      let longTimer, longFired, touchX, touchY;
-      el.addEventListener('touchstart', e => {
-        touchX = e.touches[0].clientX;
-        touchY = e.touches[0].clientY;
-        longFired = false;
-        longTimer = setTimeout(() => {
-          longFired = true;
-          if (state !== 'lost' && state !== 'won') { handleFlag(_r, _c); renderBoard(); }
-        }, 450);
-      }, { passive: true });
-      el.addEventListener('touchmove', e => {
-        if (Math.abs(e.touches[0].clientX - touchX) > 8 ||
-            Math.abs(e.touches[0].clientY - touchY) > 8) {
-          clearTimeout(longTimer);
-          longFired = true; // treat as scroll, not tap
-        }
-      }, { passive: true });
-      el.addEventListener('touchend', () => {
-        clearTimeout(longTimer);
-        if (longFired) return;
-        if (state === 'lost' || state === 'won') return;
-        if (flagMode) {
-          if (cell.revealed) chordReveal(_r, _c);  // 열린 셀: 코드 reveal
-          else handleFlag(_r, _c);                  // 닫힌 셀: 깃발 토글
-          renderBoard(); return;
-        }
-        if (cell.revealed) { chordReveal(_r, _c); }
-        else handleReveal(_r, _c);
-        renderBoard();
-      });
-      el.addEventListener('touchcancel', () => { clearTimeout(longTimer); longFired = true; });
 
       boardEl.appendChild(el);
     }
@@ -551,8 +520,66 @@ flagToggle.addEventListener('click', () => {
   flagToggle.classList.toggle('on', flagMode);
 });
 
+// ── Board touch handlers (이벤트 위임: #board에 한 번만 등록) ──
+// renderBoard()가 innerHTML을 교체해도 핸들러는 유지됨
+function initTouchHandlers() {
+  const boardEl = document.getElementById('board');
+  let startX, startY, longTimer, fired, touchR, touchC;
+
+  boardEl.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    const target = document.elementFromPoint(t.clientX, t.clientY);
+    if (!target || target.dataset.r === undefined) return;
+
+    startX  = t.clientX;
+    startY  = t.clientY;
+    fired   = false;
+    touchR  = +target.dataset.r;
+    touchC  = +target.dataset.c;
+
+    clearTimeout(longTimer);
+    const r = touchR, c = touchC;
+    longTimer = setTimeout(() => {
+      fired = true;
+      if (state !== 'lost' && state !== 'won') handleFlag(r, c);
+    }, 500);
+  }, { passive: true });
+
+  boardEl.addEventListener('touchmove', e => {
+    const t = e.touches[0];
+    if (Math.abs(t.clientX - startX) > 15 || Math.abs(t.clientY - startY) > 15) {
+      clearTimeout(longTimer);
+      fired = true;
+    }
+  }, { passive: true });
+
+  boardEl.addEventListener('touchend', () => {
+    clearTimeout(longTimer);
+    if (fired || touchR === undefined || touchR < 0) return;
+    if (state === 'lost' || state === 'won') return;
+
+    const r = touchR, c = touchC;
+    touchR = -1;
+
+    if (flagMode) {
+      if (board[r][c].revealed) chordReveal(r, c);
+      else handleFlag(r, c);
+    } else {
+      if (board[r][c].revealed) chordReveal(r, c);
+      else handleReveal(r, c);
+    }
+  });
+
+  boardEl.addEventListener('touchcancel', () => {
+    clearTimeout(longTimer);
+    fired  = true;
+    touchR = -1;
+  });
+}
+
 // ── Start ──
 initBoard();
+initTouchHandlers();
 </script>
 </body>
 </html>
