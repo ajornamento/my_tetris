@@ -601,7 +601,12 @@
   });
 
   document.getElementById('btn-hub').addEventListener('click', () => {
+    if (state === 'running' || state === 'paused') saveScore(score);
     window.location.href = 'index.html';
+  });
+
+  window.addEventListener('beforeunload', () => {
+    if (state === 'running' || state === 'paused') saveScore(score);
   });
 
   document.getElementById('btn-scores').addEventListener('click', showScores);
