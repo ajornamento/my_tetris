@@ -254,13 +254,16 @@
     try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; } catch { return []; }
   }
   function saveScore(s) {
+    if (s <= 0) return;
     const list = loadScores();
     list.push(s);
     list.sort((a,b) => b-a);
     list.splice(10);
-    localStorage.setItem(LS_KEY, JSON.stringify(list));
+    try { localStorage.setItem(LS_KEY, JSON.stringify(list)); } catch {}
+    _best = list[0]; // 메모리 캐시 즉시 반영
   }
-  function bestScore() { const l = loadScores(); return l.length ? l[0] : 0; }
+  let _best = loadScores()[0] || 0; // 페이지 로드 시 초기화
+  function bestScore() { return _best; }
 
   /* ── 초기화 ── */
   function init() {
@@ -511,7 +514,12 @@
   });
 
   document.getElementById('btn-hub').addEventListener('click', () => {
+    if (state === 'running' || state === 'paused') saveScore(score);
     window.location.href = 'index.html';
+  });
+
+  window.addEventListener('beforeunload', () => {
+    if (state === 'running' || state === 'paused') saveScore(score);
   });
 
   /* 점수판 */
