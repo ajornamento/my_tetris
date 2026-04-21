@@ -103,7 +103,7 @@
     #reset-btn:hover { background: #3a3a7a; }
 
     /* Board */
-    #board-wrap { overflow-x: auto; }
+    #board-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     #board {
       display: inline-grid;
       gap: 2px;
@@ -190,7 +190,9 @@
     }
     #result button:hover { background: #6a6aaa; }
 
-    @media (max-width: 480px) {
+    @media (max-width: 600px), (pointer: coarse) {
+      body { padding: 8px; }
+      #game-panel { padding: 10px; }
       #flag-toggle { display: block; }
       .diff-btn { padding: 6px 12px; font-size: 12px; }
     }
@@ -260,8 +262,17 @@ function saveBest(d, t) {
 }
 
 // ── Board init ──
+function calcCellSize(cols) {
+  const bodyPad   = window.innerWidth <= 600 ? 16 : 32;  // body padding both sides
+  const panelPad  = window.innerWidth <= 600 ? 20 : 32;  // game-panel padding both sides
+  const boardOver = 14 + (cols - 1) * 2;                 // board padding + gaps
+  const available = window.innerWidth - bodyPad - panelPad - boardOver;
+  return Math.max(18, Math.min(DIFF[diff].cell, Math.floor(available / cols)));
+}
+
 function initBoard() {
-  const { rows, cols, mines, cell } = DIFF[diff];
+  const { rows, cols, mines } = DIFF[diff];
+  const cell = calcCellSize(cols);
   document.getElementById('board').style.setProperty('--cell', cell + 'px');
   document.getElementById('board').style.gridTemplateColumns = `repeat(${cols}, ${cell}px)`;
 
@@ -472,18 +483,25 @@ function renderBoard() {
         handleFlag(_r, _c);
       });
 
-      // Mobile: long press = flag
-      let longTimer, longFired;
+      // Mobile: long press = flag, scroll detection cancels action
+      let longTimer, longFired, touchX, touchY;
       el.addEventListener('touchstart', e => {
-        e.preventDefault();
+        touchX = e.touches[0].clientX;
+        touchY = e.touches[0].clientY;
         longFired = false;
         longTimer = setTimeout(() => {
           longFired = true;
-          if (state !== 'lost' && state !== 'won') handleFlag(_r, _c);
-          renderBoard();
+          if (state !== 'lost' && state !== 'won') { handleFlag(_r, _c); renderBoard(); }
         }, 450);
-      }, { passive: false });
-      el.addEventListener('touchend', e => {
+      }, { passive: true });
+      el.addEventListener('touchmove', e => {
+        if (Math.abs(e.touches[0].clientX - touchX) > 8 ||
+            Math.abs(e.touches[0].clientY - touchY) > 8) {
+          clearTimeout(longTimer);
+          longFired = true; // treat as scroll, not tap
+        }
+      }, { passive: true });
+      el.addEventListener('touchend', () => {
         clearTimeout(longTimer);
         if (longFired) return;
         if (state === 'lost' || state === 'won') return;
@@ -492,7 +510,7 @@ function renderBoard() {
         else handleReveal(_r, _c);
         renderBoard();
       });
-      el.addEventListener('touchcancel', () => clearTimeout(longTimer));
+      el.addEventListener('touchcancel', () => { clearTimeout(longTimer); longFired = true; });
 
       boardEl.appendChild(el);
     }
