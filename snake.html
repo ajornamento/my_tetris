@@ -77,17 +77,17 @@
       flex-direction: column;
       align-items: center;
       gap: 4px;
-      margin-top: 4px;
+      margin-top: 12px;
     }
     .dpad-row { display: flex; gap: 4px; }
     .dpad-btn {
-      width: 44px;
-      height: 44px;
+      width: 56px;
+      height: 56px;
       background: #1e3a2a;
       border: 1px solid #2a5a3a;
-      border-radius: 6px;
+      border-radius: 8px;
       color: #aaffcc;
-      font-size: 20px;
+      font-size: 24px;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -98,11 +98,16 @@
     }
     .dpad-btn:active { background: #2a5a3a; }
     .dpad-center {
-      width: 44px;
-      height: 44px;
+      width: 56px;
+      height: 56px;
+    }
+    #canvas-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     @media (max-width: 600px) {
-      #app { flex-direction: column; align-items: center; gap: 16px; }
+      #app { flex-direction: column; align-items: center; gap: 12px; }
       #sidebar { min-width: unset; width: 100%; max-width: 320px; }
       #dpad { display: flex; }
     }
@@ -164,7 +169,21 @@
 <body>
 
 <div id="app">
-  <canvas id="canvas"></canvas>
+  <div id="canvas-wrap">
+    <canvas id="canvas"></canvas>
+    <div id="dpad">
+      <div class="dpad-row">
+        <div class="dpad-center"></div>
+        <button type="button" class="dpad-btn" data-dir="UP">▲</button>
+        <div class="dpad-center"></div>
+      </div>
+      <div class="dpad-row">
+        <button type="button" class="dpad-btn" data-dir="LEFT">◀</button>
+        <button type="button" class="dpad-btn" data-dir="DOWN">▼</button>
+        <button type="button" class="dpad-btn" data-dir="RIGHT">▶</button>
+      </div>
+    </div>
+  </div>
 
   <div id="sidebar">
     <div class="panel">
@@ -179,9 +198,9 @@
       <h3>레벨</h3>
       <div class="value" id="level-display">1</div>
     </div>
-    <button id="btn-start">시작</button>
-    <button id="btn-scores">최고 기록</button>
-    <button id="btn-hub">← 허브</button>
+    <button type="button" id="btn-start">시작</button>
+    <button type="button" id="btn-scores">최고 기록</button>
+    <button type="button" id="btn-hub">← 허브</button>
     <div class="panel">
       <h3>조작</h3>
       <div class="keys">
@@ -190,18 +209,6 @@
         ← / A : 왼쪽<br>
         → / D : 오른쪽<br>
         P : 일시정지
-      </div>
-    </div>
-    <div id="dpad">
-      <div class="dpad-row">
-        <div class="dpad-center"></div>
-        <button class="dpad-btn" data-dir="UP">▲</button>
-        <div class="dpad-center"></div>
-      </div>
-      <div class="dpad-row">
-        <button class="dpad-btn" data-dir="LEFT">◀</button>
-        <button class="dpad-btn" data-dir="DOWN">▼</button>
-        <button class="dpad-btn" data-dir="RIGHT">▶</button>
       </div>
     </div>
   </div>
