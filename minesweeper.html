@@ -227,7 +227,7 @@
   <div id="board-wrap">
     <div id="board"></div>
   </div>
-  <button id="flag-toggle">🚩 깃발 모드 OFF</button>
+  <button id="flag-toggle">👆 탭 = 열기 모드</button>
   <div id="best-bar">최고 기록: <span id="best-time">-</span></div>
 </div>
 
@@ -505,7 +505,11 @@ function renderBoard() {
         clearTimeout(longTimer);
         if (longFired) return;
         if (state === 'lost' || state === 'won') return;
-        if (flagMode) { handleFlag(_r, _c); renderBoard(); return; }
+        if (flagMode) {
+          if (cell.revealed) chordReveal(_r, _c);  // 열린 셀: 코드 reveal
+          else handleFlag(_r, _c);                  // 닫힌 셀: 깃발 토글
+          renderBoard(); return;
+        }
         if (cell.revealed) { chordReveal(_r, _c); }
         else handleReveal(_r, _c);
         renderBoard();
@@ -543,7 +547,7 @@ document.querySelectorAll('.diff-btn').forEach(btn => {
 const flagToggle = document.getElementById('flag-toggle');
 flagToggle.addEventListener('click', () => {
   flagMode = !flagMode;
-  flagToggle.textContent = flagMode ? '🚩 깃발 모드 ON' : '🚩 깃발 모드 OFF';
+  flagToggle.textContent = flagMode ? '🚩 탭 = 깃발 모드' : '👆 탭 = 열기 모드';
   flagToggle.classList.toggle('on', flagMode);
 });
 
