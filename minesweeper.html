@@ -528,14 +528,15 @@ function initTouchHandlers() {
   const boardEl = document.getElementById('board');
   let startX, startY, longTimer, fired, touchR = -1, touchC;
 
-  // 롱 프레스 시 브라우저 기본 컨텍스트 메뉴 차단 (touchcancel 방지)
-  boardEl.addEventListener('contextmenu', e => e.preventDefault());
-
   boardEl.addEventListener('touchstart', e => {
     const t = e.touches[0];
-    // e.target이 텍스트/이모지 위일 수 있으므로 closest로 셀 div를 탐색
     const target = e.target.closest('[data-r]');
     if (!target) return;
+
+    // non-passive이므로 preventDefault 가능.
+    // 브라우저 롱프레스 처리(contextmenu → touchcancel)를 완전 차단해야
+    // 500ms 타이머가 끝까지 살아남는다.
+    e.preventDefault();
 
     startX  = t.clientX;
     startY  = t.clientY;
@@ -549,7 +550,7 @@ function initTouchHandlers() {
       fired = true;
       if (state !== 'lost' && state !== 'won') handleFlag(r, c);
     }, 500);
-  }, { passive: true });
+  });
 
   boardEl.addEventListener('touchmove', e => {
     const t = e.touches[0];

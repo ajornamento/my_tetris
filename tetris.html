@@ -53,10 +53,9 @@
       border: none;
       background: transparent;
     }
-    #btn-start {
+    #btn-start, #btn-scores, #btn-hub {
       width: 100%;
       padding: 10px;
-      background: #4a4a8a;
       color: #fff;
       border: none;
       border-radius: 6px;
@@ -65,7 +64,12 @@
       font-family: inherit;
       transition: background 0.2s;
     }
-    #btn-start:hover { background: #6a6aaa; }
+    #btn-start  { background: #4a4a8a; }
+    #btn-scores { background: #2a4a2a; }
+    #btn-hub    { background: #2a2a4a; }
+    #btn-start:hover  { background: #6a6aaa; }
+    #btn-scores:hover { background: #4a6a4a; }
+    #btn-hub:hover    { background: #4a4a6a; }
     .keys {
       font-size: 11px;
       color: #666;
@@ -283,6 +287,7 @@
     </div>
     <button id="btn-start">재시작</button>
     <button id="btn-scores">기록 보기</button>
+    <a id="btn-hub" href="index.html" style="text-align:center;text-decoration:none;display:block;">&#127968; 게임 허브</a>
     <div class="panel keys">
       <div>← → 이동</div>
       <div>↑ 회전</div>
