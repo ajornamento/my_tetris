@@ -524,7 +524,7 @@ flagToggle.addEventListener('click', () => {
 // renderBoard()가 innerHTML을 교체해도 핸들러는 유지됨
 function initTouchHandlers() {
   const boardEl = document.getElementById('board');
-  let startX, startY, longTimer, fired, touchR, touchC;
+  let startX, startY, longTimer, fired, touchR = -1, touchC;
 
   boardEl.addEventListener('touchstart', e => {
     const t = e.touches[0];
@@ -554,9 +554,10 @@ function initTouchHandlers() {
     }
   }, { passive: true });
 
-  boardEl.addEventListener('touchend', () => {
+  boardEl.addEventListener('touchend', e => {
+    e.preventDefault();
     clearTimeout(longTimer);
-    if (fired || touchR === undefined || touchR < 0) return;
+    if (fired || touchR < 0) return;
     if (state === 'lost' || state === 'won') return;
 
     const r = touchR, c = touchC;
