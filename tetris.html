@@ -80,6 +80,7 @@
       justify-content: center;
       align-items: center;
       gap: 16px;
+      z-index: 50;
     }
     #overlay h2 { font-size: 36px; color: #e0e0ff; }
     #overlay p { color: #aaa; }
@@ -210,32 +211,15 @@
     }
 
     /* ── Mobile layout ── */
-    @media (max-width: 560px), (pointer: coarse) {
-      body { align-items: flex-start; padding: 4px 0 0; }
-      #app  { flex-direction: column; align-items: center; gap: 0; }
-
-      /* 사이드바: 한 줄 컴팩트 */
-      #sidebar {
-        flex-direction: row;
-        flex-wrap: nowrap;
-        width: 100%;
-        min-width: unset;
-        gap: 4px;
-        padding: 0 4px 4px;
-        order: -1;
+    /* 데스크탑과 동일한 레이아웃(캔버스+사이드바 나란히)을 유지하고
+       #app 전체를 JS로 스케일링해서 화면에 맞춤 */
+    @media (max-width: 600px), (pointer: coarse) {
+      body {
+        justify-content: flex-start;
+        align-items: center;
+        padding: 8px 0 0;
       }
-      .panel          { flex: 1; padding: 3px 6px; min-width: 0; }
-      .panel h3       { font-size: 9px; margin-bottom: 2px; }
-      .panel .value   { font-size: 16px; }
-      /* 모바일에서 불필요한 요소 숨김 */
-      #panel-next, .keys, #btn-start, #btn-scores { display: none; }
-
-      /* 컴팩트 vpad 버튼 */
-      #vpad         { gap: 6px; padding: 6px 0 6px; }
-      .vrow         { gap: 6px; }
-      .vbtn         { width: 64px; height: 52px; font-size: 22px; border-radius: 10px; }
-      .vbtn-wide    { width: 136px; font-size: 14px; }
-      .vbtn-sm      { width: 64px; height: 36px; font-size: 12px; }
+      .keys { display: none; } /* vpad가 있으니 키보드 힌트 불필요 */
     }
   </style>
 </head>
@@ -716,26 +700,34 @@ document.getElementById('vbtn-hiscore').addEventListener('click', () => {
   document.getElementById('scores-modal').classList.remove('hidden');
 });
 
-// ── Mobile scale: shrink #game-area to fit one screen ──
+// ── Mobile scale: #app(캔버스+사이드바) 전체를 화면에 맞게 축소 ──
 function applyMobileScale() {
+  const app      = document.getElementById('app');
   const gameArea = document.getElementById('game-area');
-  gameArea.style.transform    = '';
-  gameArea.style.marginBottom = '';
 
-  const isMobile = window.innerWidth <= 560 || navigator.maxTouchPoints > 0;
+  // 이전 스케일 초기화
+  [app, gameArea].forEach(el => {
+    el.style.transform    = '';
+    el.style.marginBottom = '';
+    el.style.overflow     = '';
+    el.style.height       = '';
+  });
+
+  const isMobile = window.innerWidth <= 600 || navigator.maxTouchPoints > 0;
   if (!isMobile) return;
 
-  const sidebar   = document.getElementById('sidebar');
-  const sidebarH  = sidebar.getBoundingClientRect().height;
-  const gameH     = gameArea.getBoundingClientRect().height;
-  const available = window.innerHeight - sidebarH - 4; // 4px top padding
-  if (gameH <= available) return;
+  const appW = app.getBoundingClientRect().width;
+  const appH = app.getBoundingClientRect().height;
+  const maxW = window.innerWidth;
+  const maxH = window.innerHeight - 8; // 상단 패딩 8px
 
-  const scale = available / gameH;
-  gameArea.style.transform       = `scale(${scale})`;
-  gameArea.style.transformOrigin = 'top center';
-  // marginBottom으로 축소된 빈 공간을 제거 (overflow:hidden 없이)
-  gameArea.style.marginBottom    = `-${Math.round(gameH * (1 - scale))}px`;
+  const scale = Math.min(maxW / appW, maxH / appH, 1);
+  if (scale >= 0.99) return;
+
+  app.style.transform       = `scale(${scale})`;
+  app.style.transformOrigin = 'top center';
+  // marginBottom으로 빈 공간 제거 (잘라내지 않고 공간만 축소)
+  app.style.marginBottom    = `-${Math.round(appH * (1 - scale))}px`;
 }
 
 window.addEventListener('resize', applyMobileScale);
