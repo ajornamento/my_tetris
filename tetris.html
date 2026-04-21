@@ -64,12 +64,15 @@
       font-family: inherit;
       transition: background 0.2s;
     }
+    #btn-undo   { background: #4a3a1a; }
     #btn-start  { background: #4a4a8a; }
     #btn-scores { background: #2a4a2a; }
     #btn-hub    { background: #2a2a4a; }
+    #btn-undo:hover   { background: #6a5a2a; }
     #btn-start:hover  { background: #6a6aaa; }
     #btn-scores:hover { background: #4a6a4a; }
     #btn-hub:hover    { background: #4a4a6a; }
+    #btn-undo:disabled { opacity: 0.3; cursor: default; }
     .keys {
       font-size: 11px;
       color: #666;
@@ -208,11 +211,13 @@
     .vbtn-wide { width: 162px; font-size: 16px; letter-spacing: 1px; }
     .vrow-util { gap: 10px; }
     .vbtn-sm {
-      width: 76px; height: 44px;
-      font-size: 13px;
+      width: 68px; height: 44px;
+      font-size: 12px;
       background: #1e3a5a;
       border-color: #3a5a8a;
     }
+    .vbtn-undo { background: #3a2a1e; border-color: #7a5a3a; }
+    .vbtn-undo.disabled, .vbtn-undo:disabled { opacity: 0.3; pointer-events: none; }
 
     /* ── Mobile layout ── */
     /* 데스크탑과 동일한 레이아웃(캔버스+사이드바 나란히)을 유지하고
@@ -258,6 +263,7 @@
         <button class="vbtn vbtn-wide" id="vbtn-drop">&#11015; 즉시 낙하</button>
       </div>
       <div class="vrow vrow-util">
+        <button class="vbtn vbtn-sm vbtn-undo disabled" id="vbtn-undo">&#8617; 무르기</button>
         <button class="vbtn vbtn-sm" id="vbtn-restart">&#8635; 재시작</button>
         <button class="vbtn vbtn-sm" id="vbtn-pause">&#9646;&#9646; 일시정지</button>
         <button class="vbtn vbtn-sm" id="vbtn-hiscore">&#127942; 기록</button>
@@ -285,6 +291,7 @@
       <h3>최고점수</h3>
       <div class="value" id="best-score">0</div>
     </div>
+    <button id="btn-undo" disabled>↩ 한 수 무르기</button>
     <button id="btn-start">재시작</button>
     <button id="btn-scores">기록 보기</button>
     <a id="btn-hub" href="index.html" style="text-align:center;text-decoration:none;display:block;">&#127968; 게임 허브</a>
@@ -293,6 +300,7 @@
       <div>↑ 회전</div>
       <div>↓ 빠르게</div>
       <div>Space 즉시 낙하</div>
+      <div>Z 한 수 무르기</div>
       <div>P 일시정지</div>
     </div>
   </div>
@@ -373,6 +381,7 @@ const nextCanvas = document.getElementById('next-canvas');
 const nextCtx = nextCanvas.getContext('2d');
 
 let board, piece, nextPiece, score, level, lines, gameOver, paused, animId, dropInterval, lastTime, dropCounter;
+let undoState = null;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -437,6 +446,13 @@ function calcDropInterval(lvl) {
   return Math.max(100, 1000 - (lvl - 1) * 100);
 }
 
+function setUndoAvailable(available) {
+  undoState = available ? undoState : null;
+  document.getElementById('btn-undo').disabled = !available;
+  const vbtn = document.getElementById('vbtn-undo');
+  vbtn.classList.toggle('disabled', !available);
+}
+
 function startGame() {
   board = createBoard();
   score = 0;
@@ -447,6 +463,8 @@ function startGame() {
   dropCounter = 0;
   dropInterval = calcDropInterval(level);
   nextPiece = randomPiece();
+  undoState = null;
+  setUndoAvailable(false);
   spawnPiece();
   updateUI();
   if (animId) cancelAnimationFrame(animId);
@@ -471,8 +489,33 @@ function spawnPiece() {
   }
 }
 
+function saveUndoState() {
+  undoState = {
+    board:        board.map(r => [...r]),
+    piece:        { ...piece, shape: piece.shape.map(r => [...r]) },
+    nextPiece:    { ...nextPiece, shape: nextPiece.shape.map(r => [...r]) },
+    score, level, lines, dropInterval,
+  };
+  setUndoAvailable(true);
+}
+
+function undo() {
+  if (!undoState || gameOver || paused) return;
+  board        = undoState.board;
+  piece        = undoState.piece;
+  nextPiece    = undoState.nextPiece;
+  score        = undoState.score;
+  level        = undoState.level;
+  lines        = undoState.lines;
+  dropInterval = undoState.dropInterval;
+  setUndoAvailable(false);
+  dropCounter = 0;
+  updateUI();
+}
+
 function drop() {
   if (collides(board, piece, 0, 1)) {
+    saveUndoState();
     merge(board, piece);
     const cleared = clearLines(board);
     if (cleared) {
@@ -616,6 +659,8 @@ document.getElementById('overlay-btn').addEventListener('click', () => {
   startGame();
 });
 
+document.getElementById('btn-undo').addEventListener('click', undo);
+
 document.getElementById('btn-start').addEventListener('click', () => {
   document.getElementById('overlay').classList.add('hidden');
   startGame();
@@ -668,6 +713,7 @@ bindVBtn('vbtn-right',  () => move(1));
 bindVBtn('vbtn-down',   () => drop());
 bindVBtn('vbtn-rotate', () => rotatePiece(), { repeat: false });
 bindVBtn('vbtn-drop',   () => hardDrop(),    { repeat: false });
+bindVBtn('vbtn-undo',   () => undo(),        { repeat: false });
 
 document.getElementById('vbtn-restart').addEventListener('touchstart', e => {
   e.preventDefault();
@@ -746,6 +792,7 @@ document.addEventListener('keydown', e => {
     case 'ArrowDown':  e.preventDefault(); drop();   break;
     case 'ArrowUp':    e.preventDefault(); rotatePiece(); break;
     case ' ':          e.preventDefault(); hardDrop(); break;
+    case 'z': case 'Z': e.preventDefault(); undo(); break;
     case 'p': case 'P':
       paused = !paused;
       if (!paused) lastTime = performance.now();
