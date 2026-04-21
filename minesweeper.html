@@ -528,8 +528,9 @@ function initTouchHandlers() {
 
   boardEl.addEventListener('touchstart', e => {
     const t = e.touches[0];
-    const target = document.elementFromPoint(t.clientX, t.clientY);
-    if (!target || target.dataset.r === undefined) return;
+    // e.target이 텍스트/이모지 위일 수 있으므로 closest로 셀 div를 탐색
+    const target = e.target.closest('[data-r]');
+    if (!target) return;
 
     startX  = t.clientX;
     startY  = t.clientY;
