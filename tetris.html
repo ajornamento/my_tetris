@@ -211,23 +211,31 @@
 
     /* ── Mobile layout ── */
     @media (max-width: 560px), (pointer: coarse) {
-      body { align-items: flex-start; padding: 8px 0 0; }
-      #app { flex-direction: column; align-items: center; gap: 0; }
+      body { align-items: flex-start; padding: 4px 0 0; }
+      #app  { flex-direction: column; align-items: center; gap: 0; }
+
+      /* 사이드바: 한 줄 컴팩트 */
       #sidebar {
         flex-direction: row;
-        flex-wrap: wrap;
-        width: 300px;
+        flex-wrap: nowrap;
+        width: 100%;
         min-width: unset;
-        gap: 6px;
-        margin-bottom: 8px;
+        gap: 4px;
+        padding: 0 4px 4px;
         order: -1;
       }
-      .panel { flex: 1 1 60px; padding: 6px 10px; }
-      .panel h3 { font-size: 10px; margin-bottom: 4px; }
-      .panel .value { font-size: 18px; }
-      #next-canvas { width: 80px; height: 80px; }
-      .keys { display: none; }
-      #btn-start, #btn-scores { flex: 1 1 110px; padding: 8px; font-size: 12px; }
+      .panel          { flex: 1; padding: 3px 6px; min-width: 0; }
+      .panel h3       { font-size: 9px; margin-bottom: 2px; }
+      .panel .value   { font-size: 16px; }
+      /* 모바일에서 불필요한 요소 숨김 */
+      #panel-next, .keys, #btn-start, #btn-scores { display: none; }
+
+      /* 컴팩트 vpad 버튼 */
+      #vpad         { gap: 6px; padding: 6px 0 6px; }
+      .vrow         { gap: 6px; }
+      .vbtn         { width: 64px; height: 52px; font-size: 22px; border-radius: 10px; }
+      .vbtn-wide    { width: 136px; font-size: 14px; }
+      .vbtn-sm      { width: 64px; height: 36px; font-size: 12px; }
     }
   </style>
 </head>
@@ -281,7 +289,7 @@
       <h3>줄</h3>
       <div class="value" id="lines">0</div>
     </div>
-    <div class="panel">
+    <div class="panel" id="panel-next">
       <h3>다음</h3>
       <canvas id="next-canvas" width="120" height="120"></canvas>
     </div>
@@ -711,24 +719,23 @@ document.getElementById('vbtn-hiscore').addEventListener('click', () => {
 // ── Mobile scale: shrink #game-area to fit one screen ──
 function applyMobileScale() {
   const gameArea = document.getElementById('game-area');
-  gameArea.style.transform = '';
-  gameArea.style.height    = '';
-  gameArea.style.overflow  = '';
+  gameArea.style.transform    = '';
+  gameArea.style.marginBottom = '';
 
   const isMobile = window.innerWidth <= 560 || navigator.maxTouchPoints > 0;
   if (!isMobile) return;
 
-  const sidebar  = document.getElementById('sidebar');
-  const sidebarH = sidebar.getBoundingClientRect().height;
-  const gameH    = gameArea.getBoundingClientRect().height;
-  const available = window.innerHeight - sidebarH - 8; // 8px top padding
+  const sidebar   = document.getElementById('sidebar');
+  const sidebarH  = sidebar.getBoundingClientRect().height;
+  const gameH     = gameArea.getBoundingClientRect().height;
+  const available = window.innerHeight - sidebarH - 4; // 4px top padding
   if (gameH <= available) return;
 
   const scale = available / gameH;
-  gameArea.style.height         = Math.round(gameH * scale) + 'px';
-  gameArea.style.overflow        = 'hidden';
   gameArea.style.transform       = `scale(${scale})`;
   gameArea.style.transformOrigin = 'top center';
+  // marginBottom으로 축소된 빈 공간을 제거 (overflow:hidden 없이)
+  gameArea.style.marginBottom    = `-${Math.round(gameH * (1 - scale))}px`;
 }
 
 window.addEventListener('resize', applyMobileScale);
