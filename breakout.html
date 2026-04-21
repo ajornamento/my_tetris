@@ -504,7 +504,7 @@
     } else if (state === 'paused') {
       drawOverlay('PAUSE', 'P 키로 재개');
     } else if (state === 'dead') {
-      drawOverlay('GAME OVER', `점수: ${score}`);
+      drawGameOver();
     } else if (!ballLaunched) {
       ctx.textAlign = 'center';
       ctx.fillStyle = 'rgba(200,150,255,0.55)';
@@ -523,6 +523,54 @@
     ctx.fillStyle = '#aa66cc';
     ctx.font = '16px Courier New';
     ctx.fillText(sub, CW/2, CH/2 + 18);
+  }
+
+  function drawGameOver() {
+    ctx.fillStyle = 'rgba(0,0,0,0.72)';
+    ctx.fillRect(0, 0, CW, CH);
+    ctx.textAlign = 'center';
+
+    // 제목
+    ctx.fillStyle = '#dd88ff';
+    ctx.font = 'bold 36px Courier New';
+    ctx.fillText('GAME OVER', CW/2, 100);
+
+    // 이번 점수
+    ctx.fillStyle = '#cc88ee';
+    ctx.font = '18px Courier New';
+    ctx.fillText(`점수: ${score}`, CW/2, 140);
+
+    // 구분선
+    ctx.strokeStyle = '#5a2a5a';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(40, 162); ctx.lineTo(CW-40, 162); ctx.stroke();
+
+    // 최고 기록 리스트 (상위 5개)
+    const list = loadScores();
+    ctx.font = '12px Courier New';
+    ctx.fillStyle = '#886699';
+    ctx.fillText('— 최고 기록 —', CW/2, 184);
+
+    if (list.length === 0) {
+      ctx.fillStyle = '#554466';
+      ctx.fillText('기록 없음', CW/2, 210);
+    } else {
+      list.slice(0, 5).forEach((s, i) => {
+        const y = 208 + i * 26;
+        const isCurrent = (s === score && i === list.indexOf(score));
+        ctx.fillStyle = isCurrent ? '#ffddff' : (i === 0 ? '#dd88ff' : '#886699');
+        ctx.textAlign = 'right';
+        ctx.fillText(`#${i+1}`, CW/2 - 10, y);
+        ctx.textAlign = 'left';
+        ctx.fillText(s, CW/2 + 10, y);
+      });
+      ctx.textAlign = 'center';
+    }
+
+    // 안내
+    ctx.fillStyle = '#554466';
+    ctx.font = '13px Courier New';
+    ctx.fillText('시작 버튼으로 다시 플레이', CW/2, CH - 18);
   }
 
   function roundRect(ctx, x, y, w, h, r) {
@@ -545,6 +593,7 @@
 
   /* ── 컨트롤 ── */
   document.getElementById('btn-start').addEventListener('click', () => {
+    if (state === 'running') saveScore(score); // 진행 중 재시작 시 점수 보존
     init();
     state = 'running';
     document.getElementById('btn-start').textContent = '다시 시작';
