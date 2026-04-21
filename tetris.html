@@ -502,12 +502,19 @@ function saveUndoState() {
 function undo() {
   if (!undoState || gameOver || paused) return;
   board        = undoState.board;
-  piece        = undoState.piece;
   nextPiece    = undoState.nextPiece;
   score        = undoState.score;
   level        = undoState.level;
   lines        = undoState.lines;
   dropInterval = undoState.dropInterval;
+  // 착지했던 피스를 스폰 위치에서 다시 떨어지게 복원
+  const p = undoState.piece;
+  piece = {
+    type:  p.type,
+    shape: p.shape.map(r => [...r]),
+    x:     Math.floor(COLS / 2) - Math.floor(p.shape[0].length / 2),
+    y:     0,
+  };
   setUndoAvailable(false);
   dropCounter = 0;
   updateUI();
