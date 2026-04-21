@@ -272,21 +272,20 @@
   const LS_KEY = 'breakout_scores';
   function loadScores() { try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; } catch { return []; } }
 
-  let _scoreList = loadScores();        // 메모리 기준 점수 목록
-  let _best      = _scoreList[0] || 0; // 메모리 기준 최고점수
+  let _scoreList = loadScores();
+  let _best      = _scoreList[0] || 0;
 
-  function saveScore(s) {
+  function persistScore(s) {
     if (s <= 0) return;
-    _scoreList.push(s);
-    _scoreList.sort((a, b) => b - a);
-    _scoreList.splice(10);
-    _best = _scoreList[0];
-    try { localStorage.setItem(LS_KEY, JSON.stringify(_scoreList)); } catch {}
+    const next = _scoreList.concat(s).sort((a, b) => b - a).slice(0, 10);
+    _scoreList = next;
+    _best      = next[0];
+    try { localStorage.setItem(LS_KEY, JSON.stringify(next)); } catch {}
   }
-  function bestScore()  { return _best; }
-  function getScores()  { return _scoreList; }
+  function bestScore() { return _best; }
+  function getScores() { return _scoreList; }
 
-  let _navigating = false; // btn-hub + beforeunload 이중 저장 방지
+  let _navigating = false;
 
   /* ── 초기화 ── */
   function makeBricks() {
@@ -447,8 +446,11 @@
 
   function die() {
     state = 'dead';
-    saveScore(score);
-    updateHUD();
+    const finalScore = score; // 이 시점 점수를 캡처
+    persistScore(finalScore);
+    document.getElementById('best-display').textContent = _best;
+    document.getElementById('score-display').textContent = finalScore;
+    document.getElementById('lives-display').textContent = '';
   }
 
   /* ── HUD ── */
@@ -604,7 +606,7 @@
 
   /* ── 컨트롤 ── */
   document.getElementById('btn-start').addEventListener('click', () => {
-    if (state === 'running' || state === 'paused') saveScore(score);
+    if (state === 'running' || state === 'paused') persistScore(score);
     init();
     state = 'running';
     document.getElementById('btn-start').textContent = '다시 시작';
@@ -612,13 +614,13 @@
   });
 
   document.getElementById('btn-hub').addEventListener('click', () => {
-    if (state === 'running' || state === 'paused') saveScore(score);
+    if (state === 'running' || state === 'paused') persistScore(score);
     _navigating = true;
     window.location.href = 'index.html';
   });
 
   window.addEventListener('beforeunload', () => {
-    if (!_navigating && (state === 'running' || state === 'paused')) saveScore(score);
+    if (!_navigating && (state === 'running' || state === 'paused')) persistScore(score);
   });
 
   document.getElementById('btn-scores').addEventListener('click', showScores);
