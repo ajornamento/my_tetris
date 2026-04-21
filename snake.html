@@ -253,17 +253,21 @@
   function loadScores() {
     try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; } catch { return []; }
   }
+  let _scoreList = loadScores();
+  let _best      = _scoreList[0] || 0;
+
   function saveScore(s) {
     if (s <= 0) return;
-    const list = loadScores();
-    list.push(s);
-    list.sort((a,b) => b-a);
-    list.splice(10);
-    try { localStorage.setItem(LS_KEY, JSON.stringify(list)); } catch {}
-    _best = list[0]; // 메모리 캐시 즉시 반영
+    _scoreList.push(s);
+    _scoreList.sort((a, b) => b - a);
+    _scoreList.splice(10);
+    _best = _scoreList[0];
+    try { localStorage.setItem(LS_KEY, JSON.stringify(_scoreList)); } catch {}
   }
-  let _best = loadScores()[0] || 0; // 페이지 로드 시 초기화
   function bestScore() { return _best; }
+  function getScores() { return _scoreList; }
+
+  let _navigating = false;
 
   /* ── 초기화 ── */
   function init() {
@@ -515,11 +519,12 @@
 
   document.getElementById('btn-hub').addEventListener('click', () => {
     if (state === 'running' || state === 'paused') saveScore(score);
+    _navigating = true;
     window.location.href = 'index.html';
   });
 
   window.addEventListener('beforeunload', () => {
-    if (state === 'running' || state === 'paused') saveScore(score);
+    if (!_navigating && (state === 'running' || state === 'paused')) saveScore(score);
   });
 
   /* 점수판 */
@@ -529,7 +534,7 @@
   });
 
   function showScores() {
-    const list = loadScores();
+    const list = getScores();
     const ol = document.getElementById('scores-list');
     ol.innerHTML = '';
     if (list.length === 0) {
