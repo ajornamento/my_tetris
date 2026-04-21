@@ -122,6 +122,8 @@
       font-weight: bold;
       cursor: pointer;
       user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
       -webkit-tap-highlight-color: transparent;
       transition: background 0.08s;
     }
@@ -525,6 +527,9 @@ flagToggle.addEventListener('click', () => {
 function initTouchHandlers() {
   const boardEl = document.getElementById('board');
   let startX, startY, longTimer, fired, touchR = -1, touchC;
+
+  // 롱 프레스 시 브라우저 기본 컨텍스트 메뉴 차단 (touchcancel 방지)
+  boardEl.addEventListener('contextmenu', e => e.preventDefault());
 
   boardEl.addEventListener('touchstart', e => {
     const t = e.touches[0];
